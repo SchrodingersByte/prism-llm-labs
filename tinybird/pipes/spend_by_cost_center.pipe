@@ -1,0 +1,24 @@
+DESCRIPTION >
+    Aggregated LLM spend grouped by cost center code (GL code).
+    Cost centers are stamped into tags['cost_center'] at gateway call time
+    from the project's cost_center_code field, or via the PRISM_COST_CENTER
+    SDK env var. Used for finance chargeback reporting.
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        if(tags['cost_center'] != '', tags['cost_center'], '(untagged)') AS cost_center,
+        sum(cost_usd)                                                     AS cost_usd,
+        count()                                                           AS requests,
+        sum(input_tokens + output_tokens)                                 AS total_tokens,
+        uniqExact(project_id)                                             AS project_count,
+        uniqExact(api_key_id)                                             AS key_count
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    GROUP BY cost_center
+    ORDER BY cost_usd DESC
+
+TYPE endpoint

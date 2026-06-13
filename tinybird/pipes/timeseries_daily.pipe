@@ -1,0 +1,22 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      toDate(timestamp)               AS date,
+      sum(cost_usd)                   AS cost_usd,
+      count()                         AS requests,
+      sum(input_tokens + output_tokens) AS total_tokens
+  FROM llm_events_filtered
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+    {% if defined(project_ids) and project_ids != '' %}
+    AND project_id IN {{ Array(project_ids, 'String') }}
+    {% end %}
+    AND ({{ String(user_id, '') }}    = '' OR user_id    = {{ String(user_id, '') }})
+    AND ({{ String(provider, '') }}   = '' OR provider   = {{ String(provider, '') }})
+    AND ({{ String(environment, '') }} = '' OR environment = {{ String(environment, '') }})
+  GROUP BY date
+  ORDER BY date ASC

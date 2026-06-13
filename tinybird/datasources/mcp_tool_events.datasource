@@ -1,0 +1,33 @@
+SCHEMA >
+    `event_id`               String                    `json:$.event_id`,
+    `timestamp`              DateTime64(3)             `json:$.timestamp`,
+    `session_id`             String                    `json:$.session_id`,
+    `org_id`                 String                    `json:$.org_id`,
+    `project_id`             String                    `json:$.project_id`,
+    `team_id`                String                    `json:$.team_id`,
+    `user_id`                String                    `json:$.user_id`,
+    `environment`            LowCardinality(String)    `json:$.environment`,
+    `mcp_server_name`        String                    `json:$.mcp_server_name`,
+    `tool_name`              String                    `json:$.tool_name`,
+    `downstream_resource`    String                    `json:$.downstream_resource`,
+    `execution_latency_ms`   UInt32                    `json:$.execution_latency_ms`,
+    `tool_cost_usd`          Float64                   `json:$.tool_cost_usd`,
+    `status`                 LowCardinality(String)    `json:$.status`,
+    `error_message`          String                    `json:$.error_message`,
+    `llm_request_id`         String                    `json:$.llm_request_id`,
+    `tags`                   Map(String,String)        `json:$.tags`,
+    `primitive_type`         LowCardinality(String)    `json:$.primitive_type`,
+    `cost_status`            LowCardinality(String)    `json:$.cost_status`,
+    `trace_id`               String                    `json:$.trace_id`,
+    `span_id`                String                    `json:$.span_id`,
+    `parent_span_id`         String                    `json:$.parent_span_id`,
+    `attributes`             String                    `json:$.attributes`,
+    `customer_id`            String                    `json:$.customer_id`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, trace_id, session_id, timestamp"
+ENGINE_TTL "toDateTime(timestamp) + INTERVAL 90 DAY"
+
+FORWARD_QUERY >
+    SELECT event_id, timestamp, session_id, org_id, project_id, team_id, user_id, environment, mcp_server_name, tool_name, downstream_resource, execution_latency_ms, tool_cost_usd, status, error_message, llm_request_id, tags, primitive_type, cost_status, '' AS trace_id, '' AS span_id, '' AS parent_span_id, '' AS attributes, '' AS customer_id

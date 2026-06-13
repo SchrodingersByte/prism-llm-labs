@@ -1,0 +1,41 @@
+DESCRIPTION >
+    LLM spend cross-tabbed by customer_id and model. Used by the metering API
+    to return model-level cost breakdowns per customer for invoice line items.
+
+NODE raw
+SQL >
+    %
+    SELECT
+        tags['customer_id']              AS customer_id,
+        model,
+        provider,
+        sum(cost_usd)                    AS cost_usd,
+        sum(input_tokens)                AS input_tokens,
+        sum(output_tokens)               AS output_tokens,
+        sum(cached_tokens)               AS cached_tokens,
+        count()                          AS requests,
+        countIf(status_code >= 400)      AS error_count
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND tags['customer_id'] = {{ String(customer_id, '') }}
+    GROUP BY customer_id, model, provider
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        customer_id,
+        model,
+        provider,
+        cost_usd,
+        input_tokens,
+        output_tokens,
+        cached_tokens,
+        requests,
+        error_count,
+        if(requests > 0, cost_usd / requests, 0) AS avg_cost_per_request
+    FROM raw
+    ORDER BY cost_usd DESC

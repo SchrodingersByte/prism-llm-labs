@@ -1,0 +1,17 @@
+SCHEMA >
+    `event_id`        String                    `json:$.event_id`,
+    `org_id`          String                    `json:$.org_id`,
+    `timestamp`       DateTime64(3)             `json:$.timestamp`,
+    `provider`        LowCardinality(String)    `json:$.provider`,
+    `resource_name`   String                    `json:$.resource_name`,
+    `operation_type`  LowCardinality(String)    `json:$.operation_type`,
+    `session_id`      String                    `json:$.session_id`,
+    `environment`     LowCardinality(String)    `json:$.environment`,
+    `actual_cost_usd` Float64                   `json:$.actual_cost_usd`,
+    `cost_source`     LowCardinality(String)    `json:$.cost_source`,
+    `synced_at`       DateTime64(3)             `json:$.synced_at`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, provider, timestamp"
+ENGINE_TTL "toDateTime(timestamp) + INTERVAL 365 DAY"

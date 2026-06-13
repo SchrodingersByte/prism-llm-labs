@@ -1,0 +1,45 @@
+DESCRIPTION >
+    LLM spend grouped by tags['customer_id']. Returns per-customer AI cost for
+    multi-tenant billing passthrough. Operators set x-prism-customer-id on each
+    request; the gateway stamps it as tags['customer_id'] on every llm_event.
+
+NODE raw
+SQL >
+    %
+    SELECT
+        tags['customer_id']                       AS customer_id,
+        sum(cost_usd)                             AS total_cost_usd,
+        sum(input_tokens)                         AS input_tokens,
+        sum(output_tokens)                        AS output_tokens,
+        sum(cached_tokens)                        AS cached_tokens,
+        count()                                   AS requests,
+        countIf(status_code >= 400)               AS error_count,
+        sum(latency_ms)                           AS total_latency_ms
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND tags['customer_id'] != ''
+      {% if defined(customer_id) and customer_id != '' %}
+      AND tags['customer_id'] = {{ String(customer_id, '') }}
+      {% end %}
+    GROUP BY customer_id
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        customer_id,
+        total_cost_usd,
+        input_tokens,
+        output_tokens,
+        cached_tokens,
+        input_tokens + output_tokens + cached_tokens   AS total_tokens,
+        requests,
+        error_count,
+        if(requests > 0, error_count / requests, 0)   AS error_rate,
+        if(requests > 0, total_latency_ms / requests, 0) AS avg_latency_ms
+    FROM raw
+    ORDER BY total_cost_usd DESC
+    LIMIT {{ Int32(limit, 500) }}

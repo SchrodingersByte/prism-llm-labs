@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── shadcn base tokens ─────────────────────────────────────────────── */
+    --background:             0 0% 100%;
+    --foreground:             222 47% 11%;
+    --card:                   210 40% 98%;
+    --card-foreground:        222 47% 11%;
+    --popover:                0 0% 100%;
+    --popover-foreground:     222 47% 11%;
+    --primary:                239 84% 67%;
+    --primary-foreground:     0 0% 100%;
+    --secondary:              214 32% 91%;
+    --secondary-foreground:   222 47% 20%;
+    --muted:                  210 40% 96%;
+    --muted-foreground:       215 16% 47%;
+    --accent:                 258 90% 66%;
+    --accent-foreground:      0 0% 100%;
+    --destructive:            0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border:                 214 32% 91%;
+    --input:                  214 32% 91%;
+    --ring:                   239 84% 67%;
+    --radius:                 0.5rem;
+
+    /* ── Brand design tokens ────────────────────────────────────────────── */
+
+    /* Page gradient — cool blue-grey, extracted from reference */
+    --page-from:    #dde6f5;   /* top-left  */
+    --page-mid:     #edf2fb;   /* midpoint  */
+    --page-to:      #f6f9fe;   /* bottom    */
+
+    /* Ink scale */
+    --ink-900:      #0f1117;   /* headings, CTA background        */
+    --ink-700:      #374151;   /* nav links, secondary text       */
+    --ink-500:      #6b7280;   /* body copy, placeholders         */
+    --ink-300:      #9ca3af;   /* eyebrow labels, hints           */
+    --ink-100:      #e5e7eb;   /* borders, dividers               */
+
+    /* CTA button */
+    --btn-primary-bg:     #0f1117;
+    --btn-primary-fg:     #ffffff;
+    --btn-primary-hover:  #1e2330;
+
+    /* Nav */
+    --nav-bg:         rgba(255, 255, 255, 0.80);
+    --nav-border:     rgba(15, 17, 23, 0.07);
+    --nav-blur:       12px;
+
+    /* Typography */
+    --font-sans:  "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  /* Supabase-style neutral near-black surfaces; indigo kept as the primary accent. */
+  .dark {
+    --background:             0 0% 7%;    /* #121212 — app frame */
+    --foreground:             0 0% 93%;
+    --card:                   0 0% 11%;   /* #1c1c1c — raised panels */
+    --card-foreground:        0 0% 95%;
+    --popover:                0 0% 13%;   /* #212121 */
+    --popover-foreground:     0 0% 95%;
+    --primary:                239 84% 67%;
+    --primary-foreground:     0 0% 100%;
+    --secondary:              0 0% 16%;
+    --secondary-foreground:   0 0% 80%;
+    --muted:                  0 0% 15%;
+    --muted-foreground:       0 0% 56%;
+    --accent:                 258 90% 66%;
+    --accent-foreground:      0 0% 100%;
+    --destructive:            0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border:                 0 0% 17%;   /* ~#2c2c2c hairlines */
+    --input:                  0 0% 18%;
+    --ring:                   239 84% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* ── Marketing page background ───────────────────────────────────────────── */
+.page-gradient {
+  background: linear-gradient(
+    160deg,
+    var(--page-from)  0%,
+    var(--page-mid)  50%,
+    var(--page-to)   100%
+  );
+}
+
+/* ── Reusable brand utilities (safe in Server Components — pure CSS) ─────── */
+.nav-link {
+  color: var(--ink-700);
+  transition: color 0.15s ease;
+}
+.nav-link:hover { color: var(--ink-900); }
+
+.nav-link-muted {
+  color: var(--ink-500);
+  transition: color 0.15s ease;
+}
+.nav-link-muted:hover { color: var(--ink-700); }
+
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color:      var(--btn-primary-fg);
+  transition: background 0.15s ease;
+}
+.btn-primary:hover    { background: var(--btn-primary-hover); }
+.btn-primary:disabled { opacity: 0.6; }
+
+.btn-outline {
+  background: white;
+  color:      var(--ink-700);
+  border:     1px solid var(--ink-100);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-outline:hover { background: var(--page-to); color: var(--ink-900); }
+
+.input-brand {
+  background:   white;
+  color:        var(--ink-900);
+  border:       1px solid var(--ink-100);
+  transition:   border-color 0.15s ease;
+  outline:      none;
+}
+.input-brand::placeholder { color: var(--ink-300); }
+.input-brand:focus        { border-color: var(--ink-700); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DASHBOARD DESIGN SYSTEM — dark-first, dense "data terminal"
+   Used by the rebuilt app shell + widget engine. Marketing utilities above
+   are unaffected. All surfaces lean on the shadcn semantic tokens so light
+   and dark both stay correct; the data-viz palette below feeds Recharts.
+   ══════════════════════════════════════════════════════════════════════════ */
+@layer base {
+  :root {
+    /* Categorical data-viz palette (charts, accents, sparklines) */
+    --viz-indigo:  #6366f1;
+    --viz-violet:  #8b5cf6;
+    --viz-cyan:    #06b6d4;
+    --viz-emerald: #10b981;
+    --viz-amber:   #f59e0b;
+    --viz-rose:    #f43f5e;
+    --viz-blue:    #3b82f6;
+    --viz-slate:   #64748b;
+    /* Dashboard chrome (kept subtle; auto-themed surfaces come from shadcn) */
+    --dash-grid-line: rgba(148, 163, 184, 0.14);
+  }
+}
+
+@layer components {
+  /* Compact card surface — the base for every dashboard panel */
+  .dash-card { @apply rounded-lg border border-border bg-card text-card-foreground; }
+
+  /* KPI accent: colored top hairline + faint top-down glow. Pair with .dash-card. */
+  .card-glow-indigo  { border-top: 2px solid var(--viz-indigo);  background-image: linear-gradient(180deg, rgb(99 102 241 / 0.07), transparent 42%); }
+  .card-glow-cyan    { border-top: 2px solid var(--viz-cyan);    background-image: linear-gradient(180deg, rgb(6 182 212 / 0.07), transparent 42%); }
+  .card-glow-violet  { border-top: 2px solid var(--viz-violet);  background-image: linear-gradient(180deg, rgb(139 92 246 / 0.07), transparent 42%); }
+  .card-glow-emerald { border-top: 2px solid var(--viz-emerald); background-image: linear-gradient(180deg, rgb(16 185 129 / 0.07), transparent 42%); }
+  .card-glow-amber   { border-top: 2px solid var(--viz-amber);   background-image: linear-gradient(180deg, rgb(245 158 11 / 0.07), transparent 42%); }
+  .card-glow-rose    { border-top: 2px solid var(--viz-rose);    background-image: linear-gradient(180deg, rgb(244 63 94 / 0.07), transparent 42%); }
+}
+
+@layer utilities {
+  /* Tabular figures for metrics so digits don't jitter as values update */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Thin dashboard scrollbars */
+  .dash-scroll { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+  .dash-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .dash-scroll::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+  .dash-scroll::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+  .dash-scroll::-webkit-scrollbar-track { background: transparent; }
+}

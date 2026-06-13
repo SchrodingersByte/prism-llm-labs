@@ -1,0 +1,14 @@
+SCHEMA >
+    `event_id`    String         `json:$.event_id`,
+    `org_id`      String         `json:$.org_id`,
+    `feature_tag` String         `json:$.feature_tag`,
+    `action_tag`  String         `json:$.action_tag`,
+    `session_id`  String         `json:$.session_id`,
+    `success`     UInt8          `json:$.success`,
+    `value_usd`   Float64        `json:$.value_usd`,
+    `occurred_at` DateTime64(3)  `json:$.occurred_at`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(occurred_at)"
+ENGINE_SORTING_KEY "org_id, feature_tag, occurred_at"
+ENGINE_TTL "toDateTime(occurred_at) + toIntervalDay(365)"

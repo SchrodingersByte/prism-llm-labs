@@ -1,0 +1,25 @@
+DESCRIPTION >
+    Time-to-first-token (TTFT) percentiles by model and provider.
+    Only includes streaming requests where ttft_ms > 0.
+    p50/p90/p99 in milliseconds — lower is better for chat UX.
+
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      model,
+      provider,
+      quantileExact(0.50)(ttft_ms) AS p50_ttft_ms,
+      quantileExact(0.90)(ttft_ms) AS p90_ttft_ms,
+      quantileExact(0.99)(ttft_ms) AS p99_ttft_ms,
+      avg(ttft_ms)                 AS avg_ttft_ms,
+      countIf(ttft_ms > 0)         AS streaming_requests,
+      count()                      AS total_requests
+  FROM llm_events_filtered
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    AND ttft_ms > 0
+  GROUP BY model, provider
+  ORDER BY p50_ttft_ms ASC

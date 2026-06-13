@@ -1,0 +1,24 @@
+name: Scheduled report delivery
+
+on:
+  schedule:
+    - cron: "0 8 * * *"      # 08:00 UTC daily — matches vercel.json crons entry
+  workflow_dispatch:           # allow manual trigger for testing
+
+jobs:
+  send-reports:
+    name: Send scheduled chargeback reports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call send-reports endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron/send-reports")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "send-reports endpoint returned $STATUS"
+            exit 1
+          fi

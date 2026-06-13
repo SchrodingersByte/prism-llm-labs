@@ -1,0 +1,39 @@
+NODE daily_spend
+SQL >
+  %
+  SELECT
+      toDate(timestamp) AS date,
+      sum(cost_usd)     AS daily_cost
+  FROM llm_events_filtered
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= now() - INTERVAL 30 DAY
+    AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+    {% if defined(project_ids) and project_ids != '' %}
+    AND project_id IN {{ Array(project_ids, 'String') }}
+    {% end %}
+    AND ({{ String(environment, '') }} = '' OR environment = {{ String(environment, '') }})
+  GROUP BY date
+  ORDER BY date ASC
+
+NODE windowed
+SQL >
+  SELECT
+      date,
+      daily_cost,
+      avg(daily_cost) OVER (
+        ORDER BY date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+      ) AS rolling_7d_avg,
+      daily_cost / nullIf(avg(daily_cost) OVER (
+        ORDER BY date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+      ), 0) AS spike_ratio
+  FROM daily_spend
+
+NODE endpoint
+TYPE endpoint
+SQL >
+  SELECT *
+  FROM windowed
+  WHERE spike_ratio > 2
+  ORDER BY date DESC

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    name: Lint & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check web app
+        run: pnpm --filter web exec tsc --noEmit
+
+      - name: Build web app
+        run: pnpm --filter web build
+        env:
+          # Provide dummy values so Next.js build doesn't fail on missing env vars.
+          # Real values are only needed at runtime, not build time.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          TINYBIRD_API_URL: https://api.tinybird.co
+          TINYBIRD_ADMIN_TOKEN: placeholder
+          NEXT_PUBLIC_TINYBIRD_INGEST_TOKEN: placeholder
+          UPSTASH_REDIS_REST_URL: https://placeholder.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: placeholder
+          RESEND_API_KEY: placeholder
+          RESEND_FROM_EMAIL: noreply@example.com
+          ENCRYPTION_SECRET: 0000000000000000000000000000000000000000000000000000000000000000
+          RAZORPAY_KEY_ID: rzp_test_placeholder
+          RAZORPAY_KEY_SECRET: placeholder
+          RAZORPAY_WEBHOOK_SECRET: placeholder
+          RAZORPAY_PLAN_STARTER: plan_placeholder
+          RAZORPAY_PLAN_GROWTH: plan_placeholder
+          RAZORPAY_PLAN_SCALE: plan_placeholder
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: rzp_test_placeholder
+          NEXT_PUBLIC_POSTHOG_KEY: phc_placeholder
+          NEXT_PUBLIC_POSTHOG_HOST: https://app.posthog.com
+          NEXT_PUBLIC_SENTRY_DSN: https://placeholder@o0.ingest.sentry.io/0
+          SENTRY_AUTH_TOKEN: placeholder
+          SENTRY_ORG: placeholder
+          SENTRY_PROJECT: placeholder
+          CRON_SECRET: placeholder
+          NEXT_PUBLIC_APP_URL: https://placeholder.vercel.app
+
+      - name: Type-check TypeScript SDK
+        run: pnpm --filter @prism-llm-labs/sdk exec tsc --noEmit
+
+      - name: Build TypeScript SDK
+        run: pnpm --filter @prism-llm-labs/sdk build
+
+  test-python:
+    name: Python SDK tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python SDK with dev deps
+        working-directory: packages/python-sdk
+        run: pip install -e ".[dev]"
+
+      - name: Run pytest
+        working-directory: packages/python-sdk
+        run: pytest --tb=short

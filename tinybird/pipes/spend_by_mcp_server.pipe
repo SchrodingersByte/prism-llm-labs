@@ -1,0 +1,26 @@
+DESCRIPTION >
+    Aggregated spend, call count, and error count by MCP server name.
+    Used by the Agents > Tool Analytics dashboard tab.
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        mcp_server_name,
+        count()                         AS total_calls,
+        sum(tool_cost_usd)              AS cost_usd,
+        countIf(status = 'error')       AS error_count,
+        avg(execution_latency_ms)       AS avg_latency_ms
+    FROM mcp_tool_events
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      {% if defined(project_ids) and project_ids != '' %}
+      AND project_id IN {{ Array(project_ids, 'String') }}
+      {% end %}
+      AND ({{ String(environment, '') }} = '' OR environment = {{ String(environment, '') }})
+    GROUP BY mcp_server_name
+    ORDER BY cost_usd DESC
+
+TYPE endpoint

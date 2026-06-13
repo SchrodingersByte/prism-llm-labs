@@ -1,0 +1,33 @@
+{
+  "name": "@prism-llm-labs/enforce",
+  "version": "0.1.2",
+  "description": "Import hook that transparently intercepts raw AI provider SDK imports and substitutes Prism-wrapped versions — ensuring all LLM spend is tracked.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types":   "./dist/index.d.ts",
+      "import":  "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./register": {
+      "types":   "./dist/register.d.ts",
+      "require": "./dist/register.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev":   "tsup --watch",
+    "lint":  "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@prism-llm-labs/sdk": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@prism-llm-labs/sdk": "workspace:*",
+    "@types/node":          "^20",
+    "tsup":                 "^8.0.0",
+    "typescript":           "^5"
+  }
+}

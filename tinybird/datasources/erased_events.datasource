@@ -1,0 +1,6 @@
+SCHEMA >
+    `event_id`   String    `json:$.event_id`,
+    `erased_at`  DateTime  `json:$.erased_at`
+
+ENGINE "ReplacingMergeTree"
+ENGINE_SORTING_KEY "event_id"

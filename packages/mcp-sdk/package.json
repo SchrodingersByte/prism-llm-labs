@@ -1,0 +1,31 @@
+{
+  "name": "@prism-llm-labs/mcp-sdk",
+  "version": "0.3.3",
+  "description": "MCP middleware for Prism LLM observability — intercepts tool calls, tracks costs, enforces session budgets",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types":   "./dist/index.d.ts",
+      "import":  "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev":   "tsup --watch",
+    "test":  "vitest run",
+    "lint":  "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/node": "^20",
+    "tsup":        "^8.0.0",
+    "typescript":  "^5",
+    "vitest":      "^1.0.0"
+  }
+}

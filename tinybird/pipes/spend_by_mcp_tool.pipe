@@ -1,0 +1,38 @@
+DESCRIPTION >
+    Per-tool spend, call count, error count, and latency stats across the org.
+    Used by the Agents > Tool Analytics table and MCP recommendations engine.
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        tool_name,
+        mcp_server_name,
+        primitive_type,
+        count()                                 AS total_calls,
+        countIf(status = 'error')               AS error_count,
+        countIf(status = 'ok')                  AS success_count,
+        sum(tool_cost_usd)                      AS cost_usd,
+        if(count() > 0,
+           sum(tool_cost_usd) / count(),
+           0)                                   AS avg_cost_per_call,
+        if(count() > 0,
+           countIf(status = 'error') / count(),
+           0)                                   AS error_rate,
+        avg(execution_latency_ms)               AS avg_latency_ms,
+        max(execution_latency_ms)               AS max_latency_ms,
+        countIf(cost_status = 'actual')         AS actual_cost_events,
+        countIf(cost_status = 'estimated')      AS estimated_cost_events
+    FROM mcp_tool_events
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      {% if defined(project_ids) and project_ids != '' %}
+      AND project_id IN {{ Array(project_ids, 'String') }}
+      {% end %}
+      AND ({{ String(environment, '') }} = '' OR environment = {{ String(environment, '') }})
+    GROUP BY tool_name, mcp_server_name, primitive_type
+    ORDER BY cost_usd DESC
+
+TYPE endpoint

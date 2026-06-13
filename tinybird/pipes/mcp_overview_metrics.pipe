@@ -1,0 +1,32 @@
+DESCRIPTION >
+    Org-level MCP overview KPIs: total tool calls, tool cost, error rate,
+    session count, distinct tools used, and reconciliation rate.
+    Used by the overview dashboard MCP KPI row.
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        count()                                             AS total_tool_calls,
+        sum(tool_cost_usd)                                  AS total_tool_cost_usd,
+        countIf(status = 'error')                           AS tool_error_count,
+        if(count() > 0,
+           countIf(status = 'error') / count(),
+           0)                                               AS tool_error_rate,
+        avg(execution_latency_ms)                           AS avg_tool_latency_ms,
+        uniqExact(session_id)                               AS sessions_with_tools,
+        uniqExact(tool_name)                                AS distinct_tools_used,
+        if(count() > 0,
+           countIf(cost_status = 'actual') / count(),
+           0)                                               AS reconciliation_rate
+    FROM mcp_tool_events
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      {% if defined(project_ids) and project_ids != '' %}
+      AND project_id IN {{ Array(project_ids, 'String') }}
+      {% end %}
+      AND ({{ String(environment, '') }} = '' OR environment = {{ String(environment, '') }})
+
+TYPE endpoint

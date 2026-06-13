@@ -1,0 +1,20 @@
+SCHEMA >
+    `run_id`           String             `json:$.run_id`,
+    `org_id`           String             `json:$.org_id`,
+    `project_id`       String             `json:$.project_id`,
+    `provider`         LowCardinality(String) `json:$.provider`,
+    `training_type`    LowCardinality(String) `json:$.training_type`,
+    `base_model`       LowCardinality(String) `json:$.base_model`,
+    `cost_usd`         Float64            `json:$.cost_usd`,
+    `tokens_trained`   UInt64             `json:$.tokens_trained`,
+    `status`           LowCardinality(String) `json:$.status`,
+    `started_at`       DateTime64(3)      `json:$.started_at`,
+    `completed_at`     DateTime64(3)      `json:$.completed_at`,
+    `cost_center_code` String             `json:$.cost_center_code`,
+    `workload_type`    LowCardinality(String) `json:$.workload_type`,
+    `dataset_size_mb`  Float64            `json:$.dataset_size_mb`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(started_at)"
+ENGINE_SORTING_KEY "org_id, project_id, started_at"
+ENGINE_TTL "toDateTime(started_at) + INTERVAL 365 DAY"

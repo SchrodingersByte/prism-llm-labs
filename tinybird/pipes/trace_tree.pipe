@@ -1,0 +1,51 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  -- Returns all spans for a single trace_id, ordered by timestamp.
+  -- Combines LLM call spans (from llm_events) and MCP tool spans
+  -- (from mcp_tool_events) into a unified span list for trace tree rendering.
+  --
+  -- span_kind values: 'llm' | 'tool'
+  SELECT
+      trace_id,
+      span_id,
+      parent_span_id,
+      timestamp,
+      'llm'        AS span_kind,
+      provider     AS service,
+      model        AS operation,
+      cost_usd,
+      latency_ms,
+      status_code  AS status_int,
+      ''           AS status_str,
+      org_id,
+      project_id,
+      tags
+  FROM llm_events
+  WHERE org_id   = {{ String(org_id, '') }}
+    AND trace_id = {{ String(trace_id, '') }}
+    AND event_id NOT IN (SELECT event_id FROM erased_events FINAL)
+
+  UNION ALL
+
+  SELECT
+      trace_id,
+      span_id,
+      parent_span_id,
+      timestamp,
+      'tool'             AS span_kind,
+      mcp_server_name    AS service,
+      tool_name          AS operation,
+      tool_cost_usd      AS cost_usd,
+      execution_latency_ms AS latency_ms,
+      0                  AS status_int,
+      status             AS status_str,
+      org_id,
+      project_id,
+      tags
+  FROM mcp_tool_events
+  WHERE org_id   = {{ String(org_id, '') }}
+    AND trace_id = {{ String(trace_id, '') }}
+
+  ORDER BY timestamp ASC

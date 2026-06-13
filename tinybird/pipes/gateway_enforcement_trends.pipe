@@ -1,0 +1,19 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      toStartOfHour(timestamp)        AS hour,
+      layer,
+      rejection_code,
+      http_status,
+      count()                         AS rejections,
+      uniqExact(org_id)               AS affected_orgs,
+      uniqExact(api_key_id)           AS affected_keys
+  FROM gateway_enforcement_logs
+  WHERE org_id = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    AND ({{ String(layer, '') }} = '' OR layer = {{ String(layer, '') }})
+  GROUP BY hour, layer, rejection_code, http_status
+  ORDER BY hour DESC

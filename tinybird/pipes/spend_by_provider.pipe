@@ -1,0 +1,42 @@
+DESCRIPTION >
+    Vendor spend summary: aggregate LLM cost, requests, and tokens by provider
+    with daily series for sparklines. Used by the FinOps vendor dashboard to
+    give CFOs a "total OpenAI spend" / "total Anthropic spend" view.
+
+NODE daily
+SQL >
+    %
+    SELECT
+        provider,
+        toDate(timestamp)             AS date,
+        sum(cost_usd)                 AS daily_cost,
+        count()                       AS daily_requests,
+        sum(input_tokens)             AS daily_input,
+        sum(output_tokens)            AS daily_output
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      {% if defined(project_ids) and project_ids != '' %}
+      AND project_id IN {{ Array(project_ids, 'String') }}
+      {% end %}
+      AND ({{ String(environment, '') }} = '' OR environment = {{ String(environment, '') }})
+    GROUP BY provider, date
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    SELECT
+        provider,
+        sum(daily_cost)                           AS total_cost_usd,
+        sum(daily_requests)                       AS total_requests,
+        sum(daily_input + daily_output)           AS total_tokens,
+        if(sum(daily_input + daily_output) > 0,
+           sum(daily_cost) / sum(daily_input + daily_output) * 1000000,
+           0)                                     AS cost_per_1m_tokens,
+        groupArray((date, daily_cost))            AS daily_series,
+        count()                                   AS days_tracked
+    FROM daily
+    GROUP BY provider
+    ORDER BY total_cost_usd DESC

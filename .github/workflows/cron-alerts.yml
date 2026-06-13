@@ -1,0 +1,24 @@
+name: Alert evaluator cron
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch:           # allow manual trigger for testing
+
+jobs:
+  evaluate:
+    name: Evaluate alert rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call evaluate endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/alerts/evaluate")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Evaluate endpoint returned $STATUS"
+            exit 1
+          fi

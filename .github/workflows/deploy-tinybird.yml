@@ -1,0 +1,23 @@
+name: Deploy Tinybird
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "tinybird/**"
+
+jobs:
+  deploy:
+    name: Deploy to Tinybird Cloud
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tinybird CLI
+        run: pip install tinybird-cli
+
+      - name: Deploy datasources and pipes
+        working-directory: tinybird
+        run: tb --cloud deploy --token ${{ secrets.TINYBIRD_ADMIN_TOKEN }}

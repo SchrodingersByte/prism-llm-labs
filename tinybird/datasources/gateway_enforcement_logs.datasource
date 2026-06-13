@@ -1,0 +1,19 @@
+SCHEMA >
+    `event_id`        String                    `json:$.event_id`,
+    `timestamp`       DateTime64(3)             `json:$.timestamp`,
+    `org_id`          String                    `json:$.org_id`,
+    `api_key_id`      String                    `json:$.api_key_id`,
+    `provider`        LowCardinality(String)    `json:$.provider`,
+    `model`           LowCardinality(String)    `json:$.model`,
+    `environment`     LowCardinality(String)    `json:$.environment`,
+    `layer`           LowCardinality(String)    `json:$.layer`,
+    `rejection_code`  LowCardinality(String)    `json:$.rejection_code`,
+    `http_status`     UInt16                    `json:$.http_status`,
+    `reason`          String                    `json:$.reason`,
+    `trace_id`        String                    `json:$.trace_id`,
+    `ttl_days`        UInt16                    `json:$.ttl_days`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, layer, timestamp"
+ENGINE_TTL "toDateTime(timestamp) + INTERVAL ttl_days DAY"

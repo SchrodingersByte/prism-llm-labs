@@ -1,0 +1,29 @@
+# Copy this file to .github/workflows/prism-pr-cost.yml in your own repository.
+# Add PRISM_API_KEY to your repository secrets.
+#
+# The action will post (and update on new commits) a comment on every PR
+# showing the LLM cost difference between the PR branch and the base branch.
+
+name: Prism LLM Cost Report
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  prism-cost-report:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write  # needed to post PR comments
+
+    steps:
+      - name: Prism LLM Cost Report
+        uses: prism-llm-labs/prism/packages/github-action@main
+        with:
+          prism-api-key: ${{ secrets.PRISM_API_KEY }}
+          base-branch: main        # branch to compare against
+          days-back: 30            # lookback window
+          # fail-on-regression: true          # uncomment to block merges with regressions
+          # cost-threshold-usd: 0.10          # only fail when delta > $0.10
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

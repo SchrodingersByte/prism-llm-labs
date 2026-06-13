@@ -1,0 +1,25 @@
+{
+  "name": "@prism-llm-labs/aws-helpers",
+  "version": "0.1.0",
+  "description": "Real-time AWS cost extractors for Prism MCP SDK — reads billing data from AWS API responses and calls ctx.reportActualCost() automatically.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types":   "./dist/index.d.ts",
+      "import":  "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev":   "tsup --watch",
+    "lint":  "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node":              "^20",
+    "tsup":                     "^8.0.0",
+    "typescript":               "^5"
+  }
+}

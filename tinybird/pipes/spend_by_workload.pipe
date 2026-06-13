@@ -1,0 +1,27 @@
+DESCRIPTION >
+    LLM spend grouped by workload type. Workload is resolved in priority order:
+    1. Explicit tags['workload'] set by the SDK caller
+    2. Environment inference: development -> development, staging -> staging
+    3. Default: inference
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        if(tags['workload'] != '',
+           tags['workload'],
+           if(environment = 'development', 'development',
+           if(environment = 'staging',     'staging',
+                                           'inference')))  AS workload_type,
+        sum(cost_usd)                                      AS cost_usd,
+        count()                                            AS requests,
+        sum(input_tokens + output_tokens)                  AS total_tokens,
+        avg(latency_ms)                                    AS avg_latency_ms
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    GROUP BY workload_type
+    ORDER BY cost_usd DESC
+
+TYPE endpoint

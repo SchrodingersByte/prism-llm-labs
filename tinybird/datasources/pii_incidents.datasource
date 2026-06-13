@@ -1,0 +1,18 @@
+SCHEMA >
+    `event_id`    String                 `json:$.event_id`,
+    `timestamp`   DateTime64(3)          `json:$.timestamp`,
+    `org_id`      String                 `json:$.org_id`,
+    `project_id`  String                 `json:$.project_id`,
+    `api_key_id`  String                 `json:$.api_key_id`,
+    `request_id`  String                 `json:$.request_id`,
+    `provider`    LowCardinality(String) `json:$.provider`,
+    `model`       LowCardinality(String) `json:$.model`,
+    `pii_types`   Array(String)          `json:$.pii_types[:]`,
+    `field_paths` Array(String)          `json:$.field_paths[:]`,
+    `action_taken` LowCardinality(String) `json:$.action_taken`,
+    `environment` LowCardinality(String) `json:$.environment`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, timestamp"
+ENGINE_TTL "toDateTime(timestamp) + INTERVAL 90 DAY"

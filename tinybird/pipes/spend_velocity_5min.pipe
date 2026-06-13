@@ -1,0 +1,16 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      toStartOfFiveMinutes(timestamp)         AS window_start,
+      addMinutes(toStartOfFiveMinutes(timestamp), 5) AS window_end,
+      sum(cost_usd)                           AS window_cost_usd,
+      count()                                 AS requests,
+      uniqExact(api_key_id)                   AS active_keys
+  FROM llm_events_filtered
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= now() - INTERVAL {{ UInt8(lookback_minutes, 30) }} MINUTE
+    AND ({{ String(api_key_id, '') }} = '' OR api_key_id = {{ String(api_key_id, '') }})
+  GROUP BY window_start, window_end
+  ORDER BY window_start DESC

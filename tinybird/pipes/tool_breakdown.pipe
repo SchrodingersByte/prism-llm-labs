@@ -1,0 +1,29 @@
+NODE endpoint
+SQL >
+  %
+  SELECT
+      tool_name,
+      mcp_server_name,
+      primitive_type,
+      cost_status,
+      count()                       AS call_count,
+      countIf(status = 'error')     AS error_count,
+      sum(tool_cost_usd)            AS total_cost_usd,
+      avg(tool_cost_usd)            AS avg_cost_per_call,
+      avg(execution_latency_ms)     AS avg_latency_ms,
+      max(execution_latency_ms)     AS max_latency_ms
+  FROM mcp_tool_events
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    {% if defined(session_id) and session_id != '' %}
+    AND session_id = {{ String(session_id, '') }}
+    {% end %}
+    {% if defined(project_id) and project_id != '' %}
+    AND project_id = {{ String(project_id, '') }}
+    {% end %}
+    {% if defined(primitive_type) and primitive_type != '' %}
+    AND primitive_type = {{ String(primitive_type, '') }}
+    {% end %}
+  GROUP BY tool_name, mcp_server_name, primitive_type, cost_status
+  ORDER BY call_count DESC

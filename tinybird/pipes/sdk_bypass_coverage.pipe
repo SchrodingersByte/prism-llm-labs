@@ -1,0 +1,18 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      raw_module,
+      service_name,
+      count()                                   AS total_bypasses,
+      countIf(environment = 'production')       AS prod_bypasses,
+      uniqExact(git_branch)                     AS distinct_branches,
+      uniqExact(assigned_user_email)            AS distinct_users,
+      max(timestamp)                            AS last_seen_at
+  FROM sdk_bypass_events
+  WHERE org_id = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+  GROUP BY raw_module, service_name
+  ORDER BY total_bypasses DESC

@@ -1,0 +1,43 @@
+DESCRIPTION >
+    LLM spend grouped by tags['user-id']. Returns per-customer AI cost — the
+    startup COGS number. Set x-prism-user-id header (or x-prism-tags JSON) to
+    attribute calls to individual end-users / customers.
+
+NODE raw
+SQL >
+    %
+    SELECT
+        tags['user-id']                      AS user_id,
+        sum(cost_usd)                        AS cost_usd,
+        count()                              AS requests,
+        sum(input_tokens)                    AS input_tokens,
+        sum(output_tokens)                   AS output_tokens,
+        countIf(status_code >= 400)          AS error_count,
+        sum(latency_ms)                      AS total_latency_ms,
+        groupUniqArray(tags['feature'])      AS features_used
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND tags['user-id'] != ''
+      {% if defined(project_id) and project_id != '' %}
+      AND project_id = {{ String(project_id, '') }}
+      {% end %}
+    GROUP BY user_id
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        user_id,
+        cost_usd,
+        requests,
+        input_tokens + output_tokens                          AS total_tokens,
+        features_used,
+        if(requests > 0, total_latency_ms / requests, 0)     AS avg_latency_ms,
+        if(requests > 0, error_count / requests, 0)          AS error_rate,
+        if(requests > 0, cost_usd / requests, 0)             AS avg_cost_per_call
+    FROM raw
+    ORDER BY cost_usd DESC
+    LIMIT {{ Int32(limit, 100) }}

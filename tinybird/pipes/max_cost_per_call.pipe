@@ -1,0 +1,12 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      max(cost_usd)  AS max_cost_usd,
+      count()        AS requests,
+      avg(cost_usd)  AS avg_cost_usd
+  FROM llm_events_filtered
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}

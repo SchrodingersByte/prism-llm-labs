@@ -1,0 +1,40 @@
+name: "Prism LLM Cost Report"
+description: "Post a PR comment showing LLM cost diff between this branch and the base branch"
+author: "Prism LLM Labs"
+
+inputs:
+  prism-api-key:
+    description: "Your Prism API key (store in GitHub Secrets)"
+    required: true
+  prism-api-url:
+    description: "Prism API base URL"
+    required: false
+    default: "https://useprism.dev"
+  base-branch:
+    description: "Base branch to compare against"
+    required: false
+    default: "main"
+  days-back:
+    description: "How many days of history to include in the comparison"
+    required: false
+    default: "30"
+  fail-on-regression:
+    description: "Fail the action step if this PR's branch costs more than the base branch"
+    required: false
+    default: "false"
+  cost-threshold-usd:
+    description: "Only fail when the regression exceeds this dollar amount (requires fail-on-regression: true)"
+    required: false
+    default: "0"
+
+outputs:
+  head-cost-usd:
+    description: "Total LLM cost for the PR branch"
+  base-cost-usd:
+    description: "Total LLM cost for the base branch"
+  delta-cost-usd:
+    description: "Cost delta (head minus base)"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"

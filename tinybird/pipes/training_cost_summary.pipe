@@ -1,0 +1,28 @@
+DESCRIPTION >
+    Training and fine-tuning run cost summary by provider, type, and base model.
+    Used by the Training dashboard page and infra_cost_breakdown pipe.
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        provider,
+        training_type,
+        base_model,
+        count()                   AS run_count,
+        sum(cost_usd)             AS total_cost_usd,
+        sum(tokens_trained)       AS total_tokens_trained,
+        if(count() > 0,
+           sum(cost_usd) / count(),
+           0)                     AS avg_cost_per_run,
+        countIf(status = 'completed')  AS completed_count,
+        countIf(status = 'failed')     AS failed_count,
+        countIf(status = 'running')    AS running_count
+    FROM training_run_events
+    WHERE org_id      = {{ String(org_id, '') }}
+      AND started_at >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND started_at <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    GROUP BY provider, training_type, base_model
+    ORDER BY total_cost_usd DESC
+
+TYPE endpoint

@@ -1,0 +1,48 @@
+name: Pricing Parity Check
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/lib/pricing/table.ts"
+      - "packages/typescript-sdk/src/pricing.ts"
+      - "packages/python-sdk/prism/_pricing.py"
+      - "scripts/check-pricing-parity.ts"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/web/lib/pricing/table.ts"
+      - "packages/typescript-sdk/src/pricing.ts"
+      - "packages/python-sdk/prism/_pricing.py"
+
+jobs:
+  pricing-parity:
+    name: Verify web ↔ TS ↔ Python pricing tables match
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Python SDK (editable)
+        run: pip install -e packages/python-sdk
+
+      - name: Run pricing parity check
+        run: pnpm test:pricing-parity

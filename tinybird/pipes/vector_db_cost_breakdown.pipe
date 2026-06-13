@@ -1,0 +1,28 @@
+DESCRIPTION >
+    Vector DB cost breakdown from MCP tool events filtered by downstream_resource.
+    Only returns events where downstream_resource is set (Pinecone, Qdrant, etc.).
+    Used by the Vector DB cost dashboard section alongside reconciled actuals
+    from Supabase mcp_cost_reconciliation.
+
+NODE endpoint
+SQL >
+    %
+    SELECT
+        downstream_resource                    AS resource,
+        count()                                AS tool_calls,
+        sum(tool_cost_usd)                     AS estimated_cost_usd,
+        avg(execution_latency_ms)              AS avg_latency_ms,
+        max(execution_latency_ms)              AS max_latency_ms,
+        countIf(status = 'error')              AS error_count,
+        if(count() > 0,
+           countIf(status = 'error') / count(),
+           0)                                  AS error_rate
+    FROM mcp_tool_events
+    WHERE org_id            = {{ String(org_id, '') }}
+      AND timestamp        >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp        <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND downstream_resource != ''
+    GROUP BY resource
+    ORDER BY estimated_cost_usd DESC
+
+TYPE endpoint

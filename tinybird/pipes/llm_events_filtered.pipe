@@ -1,0 +1,11 @@
+DESCRIPTION >
+    View of llm_events with GDPR-erased events removed.
+    All analytics pipes should read from this pipe, not from llm_events directly.
+
+NODE filtered
+SQL >
+    SELECT *
+    FROM llm_events
+    WHERE event_id NOT IN (
+        SELECT event_id FROM erased_events FINAL
+    )

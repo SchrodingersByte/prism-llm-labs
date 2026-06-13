@@ -1,0 +1,40 @@
+name: Publish Python SDK to PyPI
+
+on:
+  push:
+    tags:
+      - "python-sdk/v*"   # e.g. python-sdk/v0.1.0
+
+jobs:
+  publish:
+    name: Build & publish prism-llm
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # required for OIDC trusted publishing
+      contents: read    # required to checkout private repo
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fix git safe directory
+        run: git config --global --add safe.directory '*'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: pip install hatch
+
+      - name: Build distribution
+        working-directory: packages/python-sdk
+        run: hatch build
+
+      - name: Publish to PyPI (trusted publishing — no token needed)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python-sdk/dist/
+          attestations: false

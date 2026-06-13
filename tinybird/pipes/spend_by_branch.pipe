@@ -1,0 +1,23 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      tags['git_branch']              AS branch,
+      tags['git_commit']              AS commit_sha,
+      sum(cost_usd)                   AS cost_usd,
+      count()                         AS requests,
+      sum(input_tokens + output_tokens) AS total_tokens,
+      avg(latency_ms)                 AS avg_latency_ms
+  FROM llm_events_filtered
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+    {% if defined(project_ids) and project_ids != '' %}
+    AND project_id IN {{ Array(project_ids, 'String') }}
+    {% end %}
+    AND tags['git_branch'] != ''
+    AND ({{ String(key_type, '') }} = '' OR key_type = {{ String(key_type, '') }})
+  GROUP BY branch, commit_sha
+  ORDER BY cost_usd DESC

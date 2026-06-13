@@ -1,0 +1,50 @@
+DESCRIPTION >
+    Cost per successful outcome per feature/action tag.
+    Joins LLM spend with actual outcome signals from outcome_events datasource.
+    When no outcome signals exist, returns 0 for actual_cost_per_success.
+
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  WITH
+    feature_costs AS (
+      SELECT
+          tags['feature']                AS feature_tag,
+          sum(cost_usd)                  AS total_cost_usd,
+          count()                        AS total_requests
+      FROM llm_events_filtered
+      WHERE org_id    = {{ String(org_id, '') }}
+        AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+        AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+        AND tags['feature'] != ''
+      GROUP BY feature_tag
+    ),
+    outcome_counts AS (
+      SELECT
+          feature_tag,
+          countIf(success = 1)               AS successful_outcomes,
+          countIf(success = 0)               AS failed_outcomes,
+          sum(if(success = 1, value_usd, 0)) AS total_value_usd
+      FROM outcome_events
+      WHERE org_id       = {{ String(org_id, '') }}
+        AND occurred_at >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+        AND occurred_at <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      GROUP BY feature_tag
+    )
+  SELECT
+      fc.feature_tag,
+      fc.total_cost_usd,
+      fc.total_requests,
+      coalesce(oc.successful_outcomes, 0)                    AS successful_outcomes,
+      coalesce(oc.failed_outcomes, 0)                        AS failed_outcomes,
+      coalesce(oc.total_value_usd, 0)                        AS total_value_usd,
+      if(oc.successful_outcomes > 0,
+         fc.total_cost_usd / oc.successful_outcomes,
+         0)                                                   AS actual_cost_per_success,
+      if(oc.total_value_usd > 0 AND fc.total_cost_usd > 0,
+         oc.total_value_usd / fc.total_cost_usd,
+         0)                                                   AS roi_ratio
+  FROM feature_costs fc
+  LEFT JOIN outcome_counts oc ON fc.feature_tag = oc.feature_tag
+  ORDER BY fc.total_cost_usd DESC

@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/alerts/evaluate",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/billing/sync",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-usage",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/build-recommendations",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

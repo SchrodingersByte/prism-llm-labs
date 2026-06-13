@@ -1,0 +1,39 @@
+DESCRIPTION >
+    Raw event rows for CSV/JSON export. All analytics filtering applies.
+    Hard-limited to 100,000 rows per call.
+
+NODE endpoint
+SQL >
+  %
+  SELECT
+      event_id,
+      timestamp,
+      project_id,
+      project_name,
+      user_id,
+      environment,
+      provider,
+      model,
+      input_tokens,
+      output_tokens,
+      cached_tokens,
+      cost_usd,
+      latency_ms,
+      status_code,
+      request_id,
+      tags
+  FROM llm_events_filtered
+  WHERE org_id = {{ String(org_id, '') }}
+    {% if defined(project_id) and project_id != '' %}
+    AND project_id = {{ String(project_id, '') }}
+    {% end %}
+    {% if defined(user_id) and user_id != '' %}
+    AND user_id = {{ String(user_id, '') }}
+    {% end %}
+    {% if defined(provider) and provider != '' %}
+    AND provider = {{ String(provider, '') }}
+    {% end %}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+  ORDER BY timestamp DESC
+  LIMIT 100000

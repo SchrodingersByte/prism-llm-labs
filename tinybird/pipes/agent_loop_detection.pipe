@@ -1,0 +1,24 @@
+NODE endpoint
+SQL >
+  %
+  -- Detect potential agent loops: same tool called >= threshold times
+  -- within a rolling window. Used for retrospective dashboard view.
+  -- Real-time circuit breaking uses Redis counters, not this pipe.
+  SELECT
+      session_id,
+      tool_name,
+      count()                   AS call_count,
+      min(timestamp)            AS first_call,
+      max(timestamp)            AS last_call,
+      dateDiff('second',
+        min(timestamp),
+        max(timestamp))         AS window_seconds,
+      sum(tool_cost_usd)        AS cost_usd
+  FROM mcp_tool_events
+  WHERE org_id    = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+  GROUP BY session_id, tool_name
+  HAVING call_count >= {{ Int32(min_calls, 5) }}
+  ORDER BY call_count DESC
+  LIMIT 200

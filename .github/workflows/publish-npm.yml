@@ -1,0 +1,60 @@
+name: Publish npm packages
+
+# Triggers on any versioned tag for these npm packages:
+#   typescript-sdk/v*  →  @prism-llm-labs/sdk
+#   mcp-sdk/v*         →  @prism-llm-labs/mcp-sdk
+#   enforce/v*         →  @prism-llm-labs/enforce
+#   aws-helpers/v*     →  @prism-llm-labs/aws-helpers
+#   langchain-ts/v*    →  @prism-llm-labs/langchain
+#   mcp-proxy/v*       →  @prism-llm-labs/mcp-proxy
+
+on:
+  push:
+    tags:
+      - "typescript-sdk/v*"
+      - "mcp-sdk/v*"
+      - "enforce/v*"
+      - "aws-helpers/v*"
+      - "langchain-ts/v*"
+      - "mcp-proxy/v*"
+
+jobs:
+  publish:
+    name: Build & publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Resolve which package to publish from the tag name
+      - name: Resolve package
+        id: pkg
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if   [[ "$TAG" == typescript-sdk/* ]]; then echo "filter=@prism-llm-labs/sdk"         >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == mcp-sdk/* ]];        then echo "filter=@prism-llm-labs/mcp-sdk"     >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == enforce/* ]];         then echo "filter=@prism-llm-labs/enforce"     >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == aws-helpers/* ]];     then echo "filter=@prism-llm-labs/aws-helpers" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == langchain-ts/* ]];    then echo "filter=@prism-llm-labs/langchain"   >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == mcp-proxy/* ]];       then echo "filter=@prism-llm-labs/mcp-proxy"  >> $GITHUB_OUTPUT
+          else echo "Unknown tag pattern: $TAG" && exit 1
+          fi
+
+      - name: Build package
+        run: pnpm --filter "${{ steps.pkg.outputs.filter }}..." build
+
+      - name: Publish to npm
+        run: pnpm --filter "${{ steps.pkg.outputs.filter }}" publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

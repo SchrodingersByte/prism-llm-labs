@@ -1,0 +1,18 @@
+{
+  "name": "prism",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test:pricing-parity": "npx tsx scripts/check-pricing-parity.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0"
+  },
+  "packageManager": "pnpm@9.15.9"
+}

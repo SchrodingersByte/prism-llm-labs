@@ -1,0 +1,9 @@
+# Supabase configuration for the Prism staging project.
+# Remote operations use `--db-url <session-pooler-conn>`; these local-dev
+# values are only used by `supabase start`.
+project_id = "irehykmlliwarkcyzeqg"
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17

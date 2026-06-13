@@ -1,0 +1,24 @@
+NODE endpoint
+TYPE endpoint
+SQL >
+  %
+  SELECT
+      tags['system_prompt_hash']                                                                       AS prompt_hash,
+      if(tags['system_prompt_version'] != '', tags['system_prompt_version'], tags['system_prompt_hash']) AS prompt_label,
+      count()                                                                                           AS requests,
+      sum(cost_usd)                                                                                     AS total_cost_usd,
+      avg(cost_usd)                                                                                     AS avg_cost_per_request,
+      avg(latency_ms)                                                                                   AS avg_latency_ms,
+      min(timestamp)                                                                                    AS first_seen,
+      max(timestamp)                                                                                    AS last_seen
+  FROM llm_events_filtered
+  WHERE org_id  = {{ String(org_id, '') }}
+    AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+    {% if defined(project_ids) and project_ids != '' %}
+    AND project_id IN {{ Array(project_ids, 'String') }}
+    {% end %}
+    AND tags['system_prompt_hash'] != ''
+  GROUP BY prompt_hash, prompt_label
+  ORDER BY last_seen DESC

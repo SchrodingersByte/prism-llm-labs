@@ -1,0 +1,40 @@
+NODE endpoint
+SQL >
+  %
+  -- Combine LLM call costs + MCP tool costs for a single session.
+  -- LLM subquery reads llm_events_filtered (v2, Map tags, GDPR-erased events removed).
+  SELECT
+      session_id,
+      sum(llm_cost)    AS llm_cost_usd,
+      sum(tool_cost)   AS tool_cost_usd,
+      sum(llm_cost) + sum(tool_cost) AS total_cost_usd,
+      sum(llm_calls)   AS llm_calls,
+      sum(tool_calls)  AS tool_calls
+  FROM (
+      -- LLM events for this session (v2, Map tags)
+      SELECT
+          tags['session_id']     AS session_id,
+          sum(cost_usd)          AS llm_cost,
+          0.0                    AS tool_cost,
+          count()                AS llm_calls,
+          0                      AS tool_calls
+      FROM llm_events_filtered
+      WHERE org_id                = {{ String(org_id, '') }}
+        AND tags['session_id']    = {{ String(session_id, '') }}
+      GROUP BY session_id
+
+      UNION ALL
+
+      -- MCP tool events for this session
+      SELECT
+          session_id,
+          0.0                    AS llm_cost,
+          sum(tool_cost_usd)     AS tool_cost,
+          0                      AS llm_calls,
+          count()                AS tool_calls
+      FROM mcp_tool_events
+      WHERE org_id     = {{ String(org_id, '') }}
+        AND session_id = {{ String(session_id, '') }}
+      GROUP BY session_id
+  )
+  GROUP BY session_id

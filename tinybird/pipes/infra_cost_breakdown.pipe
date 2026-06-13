@@ -1,0 +1,57 @@
+DESCRIPTION >
+    Unified AI infrastructure cost breakdown across three cost categories:
+    LLM inference tokens, MCP tool calls (vector DB / API costs), and
+    model training runs. Used by the CFO-level reconciliation dashboard.
+
+NODE llm_costs
+SQL >
+    %
+    SELECT
+        'llm_inference' AS category,
+        sum(cost_usd)   AS cost_usd,
+        count()         AS events
+    FROM llm_events_filtered
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+
+NODE tool_costs
+SQL >
+    %
+    SELECT
+        if(downstream_resource != '', downstream_resource, 'mcp_tools') AS category,
+        sum(tool_cost_usd)                                               AS cost_usd,
+        count()                                                          AS events
+    FROM mcp_tool_events
+    WHERE org_id    = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+    GROUP BY category
+
+NODE training_costs
+SQL >
+    %
+    SELECT
+        'model_training' AS category,
+        sum(cost_usd)    AS cost_usd,
+        count()          AS events
+    FROM training_run_events
+    WHERE org_id      = {{ String(org_id, '') }}
+      AND started_at >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND started_at <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+
+NODE endpoint
+SQL >
+    SELECT
+        category,
+        sum(cost_usd)  AS cost_usd,
+        sum(events)    AS events
+    FROM (
+        SELECT * FROM llm_costs
+        UNION ALL SELECT * FROM tool_costs
+        UNION ALL SELECT * FROM training_costs
+    )
+    GROUP BY category
+    ORDER BY cost_usd DESC
+
+TYPE endpoint

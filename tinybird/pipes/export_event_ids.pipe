@@ -1,0 +1,14 @@
+DESCRIPTION >
+    Returns event_id values for a given org (and optional user) — used by the GDPR erasure endpoint.
+
+NODE endpoint
+SQL >
+  %
+  SELECT event_id
+  FROM llm_events_filtered
+  WHERE org_id = {{ String(org_id, '') }}
+    {% if defined(user_id) and user_id != '' %}
+    AND user_id = {{ String(user_id, '') }}
+    {% end %}
+    AND timestamp >= {{ DateTime(from_date, '2000-01-01 00:00:00') }}
+    AND timestamp <= {{ DateTime(to_date,   '2099-12-31 23:59:59') }}

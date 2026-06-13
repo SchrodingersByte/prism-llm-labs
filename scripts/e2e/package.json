@@ -1,0 +1,29 @@
+{
+  "name": "@prism/e2e-scripts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "E2E test scripts for Prism SDK data insertion and verification",
+  "scripts": {
+    "seed":        "ts-node --project tsconfig.json seed.ts",
+    "teardown":    "ts-node --project tsconfig.json teardown.ts",
+    "analytics":   "ts-node --project tsconfig.json run-ts-analytics.ts",
+    "gateway":     "ts-node --project tsconfig.json run-ts-gateway.ts",
+    "mcp":         "ts-node --project tsconfig.json run-mcp.ts",
+    "verify":      "ts-node --project tsconfig.json verify.ts",
+    "e2e":         "bash ../e2e/run-all.sh"
+  },
+  "dependencies": {
+    "@prism-llm-labs/sdk":          "workspace:*",
+    "@prism-llm-labs/mcp-sdk":      "workspace:*",
+    "@modelcontextprotocol/sdk":    "^1.10.2",
+    "@pinecone-database/pinecone":  "^3.0.0",
+    "@supabase/supabase-js":        "^2.39.0",
+    "dotenv":                       "^16.4.5",
+    "openai":                       "^4.67.0"
+  },
+  "devDependencies": {
+    "ts-node":    "^10.9.2",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.7"
+  }
+}

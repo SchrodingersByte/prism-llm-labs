@@ -1,0 +1,20 @@
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter web build",
+  "outputDirectory": "apps/web/.next",
+  "crons": [
+    {
+      "path": "/api/cron/reconcile-usage",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/send-reports",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/build-recommendations",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
