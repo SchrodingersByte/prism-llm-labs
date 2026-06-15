@@ -186,6 +186,8 @@ class OpenAI(_BaseOpenAI):
         environment: Optional[str] = None,
         session_id: Optional[str] = None,
         mode: str = "sdk",
+        capture_payloads: str = "off",
+        redact=None,
         **kwargs,
     ):
         key = prism_key or os.environ.get("PRISM_API_KEY")
@@ -241,7 +243,7 @@ class OpenAI(_BaseOpenAI):
             cost_center = os.environ.get("PRISM_COST_CENTER")
             if cost_center:
                 default_tags["cost_center"] = cost_center
-            tracker = EventTracker(key, default_tags=default_tags)
+            tracker = EventTracker(key, default_tags=default_tags, capture_payloads=capture_payloads, redact=redact)
             budget  = BudgetChecker(key)
             # Replace the completions resource with our instrumented subclass
             self.chat.completions = _PrismCompletions(

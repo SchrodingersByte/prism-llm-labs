@@ -27,6 +27,14 @@ export interface LLMEvent {
   parent_span_id?: string;
   /** JSON-serialized TraceContext.attributes — git context, downstream_resource, cost_center_code. */
   attributes?:     string;
+  /** PRD-0 captured content (sent only when capturePayloads !== "off"). */
+  payload?: {
+    prompt?:       unknown[];
+    completion?:   string;
+    context?:      unknown[];
+    tool_io?:      unknown[];
+    pre_redacted?: boolean;
+  };
 }
 
 export interface PrismOptions {
@@ -66,4 +74,12 @@ export interface PrismOptions {
    * calls with trace() for automatic parent-child span wiring instead.
    */
   traceId?: string;
+  /**
+   * Capture prompt/completion content alongside metadata (PRD-0). Default "off".
+   * "redacted" applies the optional `redact` hook client-side before sending;
+   * "full" sends raw (the server still redacts per the project's capture settings).
+   */
+  capturePayloads?: "off" | "redacted" | "full";
+  /** Client-side redactor applied to captured strings when capturePayloads === "redacted". */
+  redact?: (text: string) => string;
 }

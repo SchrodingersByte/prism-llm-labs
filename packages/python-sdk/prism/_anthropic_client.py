@@ -81,6 +81,8 @@ class PrismAnthropic(_BaseAnthropic):
         environment: Optional[str] = None,
         session_id: Optional[str] = None,
         mode: str = "sdk",
+        capture_payloads: str = "off",
+        redact=None,
         **kwargs,
     ):
         key = prism_key or os.environ.get("PRISM_API_KEY")
@@ -106,7 +108,7 @@ class PrismAnthropic(_BaseAnthropic):
             git_ctx = _detect_git_context()
             sid = session_id or str(uuid.uuid4())
             default_tags = {**git_ctx, "session_id": sid}
-            tracker = EventTracker(key, default_tags=default_tags)
+            tracker = EventTracker(key, default_tags=default_tags, capture_payloads=capture_payloads, redact=redact)
             budget  = BudgetChecker(key)
             self.messages = _PrismMessages(
                 self, tracker, budget, prism_project, prism_team, prism_env,

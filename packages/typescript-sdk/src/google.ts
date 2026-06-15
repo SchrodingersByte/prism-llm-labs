@@ -25,6 +25,8 @@ export class PrismGoogleGenerativeAI extends GoogleGenerativeAI {
 
     if (key) {
       this._tracker = new EventTracker(key, ingestUrl);
+      this._tracker.capturePayloads = options.capturePayloads ?? "off";
+      this._tracker.redact          = options.redact;
       this._budget  = new BudgetChecker(key);
     } else {
       console.warn("[prism] PRISM_API_KEY not set — observability disabled.");

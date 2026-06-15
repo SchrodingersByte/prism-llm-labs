@@ -63,6 +63,10 @@ export class EventTracker {
   private queue:      LLMEvent[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // PRD-0 content capture — set by the provider wrapper from PrismOptions.
+  capturePayloads: "off" | "redacted" | "full" = "off";
+  redact?: (text: string) => string;
+
   constructor(
     key:            string,
     ingestUrl?:     string,
@@ -256,6 +260,8 @@ export class EventTracker {
                          : "",
       };
 
+      if (this.capturePayloads !== "off") event.payload = this._buildPayload(messages, response);
+
       this._enqueue(event);
     } catch {
       // Never propagate — observability must never break the caller
@@ -313,6 +319,8 @@ export class EventTracker {
         span_id:       traceCtxRaw?.spanId       ?? "",
         parent_span_id: traceCtxRaw?.parentSpanId ?? "",
       };
+
+      if (this.capturePayloads !== "off") event.payload = this._buildPayload([], response);
 
       this._enqueue(event);
     } catch {
@@ -399,6 +407,43 @@ export class EventTracker {
         }),
       });
     } catch { /* Never propagate */ }
+  }
+
+  /** Build the optional content payload from prompt messages + provider response (PRD-0). */
+  private _buildPayload(messages: unknown[], response: unknown): LLMEvent["payload"] {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = response as any;
+      const doRedact  = this.capturePayloads === "redacted" && typeof this.redact === "function";
+      const redactStr = (s: string): string => (doRedact ? this.redact!(s) : s);
+      const redactDeep = (v: unknown): unknown => {
+        if (typeof v === "string") return redactStr(v);
+        if (Array.isArray(v))      return v.map(redactDeep);
+        if (v && typeof v === "object") {
+          return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, val]) => [k, redactDeep(val)]));
+        }
+        return v;
+      };
+
+      const prompt = Array.isArray(messages) && messages.length > 0
+        ? (redactDeep(messages) as unknown[])
+        : undefined;
+
+      let completion: string | undefined;
+      const oa = r?.choices?.[0]?.message?.content;
+      if (typeof oa === "string") {
+        completion = oa;
+      } else if (Array.isArray(r?.content)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const text = r.content.filter((b: any) => b?.type === "text").map((b: any) => b.text ?? "").join("\n");
+        completion = text || undefined;
+      }
+      if (completion) completion = redactStr(completion);
+
+      return { prompt, completion, pre_redacted: doRedact ? true : undefined };
+    } catch {
+      return undefined;
+    }
   }
 
   private _orgFromKey(): string {

@@ -14,10 +14,13 @@ from prism.trace import get_current_trace
 
 
 class EventTracker:
-    def __init__(self, prism_key: str, default_tags: dict | None = None):
+    def __init__(self, prism_key: str, default_tags: dict | None = None,
+                 capture_payloads: str = "off", redact=None):
         self._key          = prism_key
         self._http         = httpx.Client(timeout=5.0)
         self._default_tags = default_tags or {}
+        self._capture_payloads = capture_payloads
+        self._redact           = redact
 
     @staticmethod
     def _hash_system_prompt(messages: list) -> str:
@@ -54,6 +57,60 @@ class EventTracker:
                     elif t == "file":
                         mods.add("document")
         return ",".join(sorted(mods))
+
+    def _build_payload(self, messages, response):
+        """Build the optional captured-content payload (PRD-0)."""
+        try:
+            do_redact = self._capture_payloads == "redacted" and callable(self._redact)
+
+            def rstr(s):
+                return self._redact(s) if (do_redact and isinstance(s, str)) else s
+
+            def rdeep(v):
+                if isinstance(v, str):
+                    return rstr(v)
+                if isinstance(v, list):
+                    return [rdeep(x) for x in v]
+                if isinstance(v, dict):
+                    return {k: rdeep(x) for k, x in v.items()}
+                return v
+
+            prompt = None
+            if messages:
+                ser = []
+                for m in messages:
+                    if isinstance(m, dict):
+                        ser.append(m)
+                    else:
+                        ser.append({"role": getattr(m, "role", ""), "content": getattr(m, "content", "")})
+                prompt = rdeep(ser)
+
+            completion = None
+            choices = getattr(response, "choices", None) or []
+            if choices:
+                msg = getattr(choices[0], "message", None)
+                c = getattr(msg, "content", None)
+                if isinstance(c, str):
+                    completion = c
+            if completion is None:
+                content = getattr(response, "content", None)
+                if isinstance(content, list):
+                    parts = [getattr(b, "text", "") for b in content if getattr(b, "type", None) == "text"]
+                    joined = "\n".join([p for p in parts if p])
+                    completion = joined or None
+            if completion is not None:
+                completion = rstr(completion)
+
+            payload: dict = {}
+            if prompt is not None:
+                payload["prompt"] = prompt
+            if completion is not None:
+                payload["completion"] = completion
+            if do_redact:
+                payload["pre_redacted"] = True
+            return payload or None
+        except Exception:
+            return None
 
     def capture(
         self,
@@ -152,6 +209,10 @@ class EventTracker:
                                  if trace_ctx and trace_ctx.attributes
                                  else "",
             }
+            if self._capture_payloads != "off":
+                _pl = self._build_payload(messages or [], response)
+                if _pl:
+                    event["payload"] = _pl
             resp = self._http.post(
                 get_ingest_url(),
                 content=json.dumps({"events": [event]}),
@@ -240,6 +301,10 @@ class EventTracker:
                 "request_id":    getattr(response, "id", "") or "",
                 "tags":          {**self._default_tags, **(call_tags or {})},
             }
+            if self._capture_payloads != "off":
+                _pl = self._build_payload([], response)
+                if _pl:
+                    event["payload"] = _pl
             resp = self._http.post(
                 get_ingest_url(),
                 content=json.dumps({"events": [event]}),

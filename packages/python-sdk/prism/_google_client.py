@@ -81,6 +81,8 @@ class PrismGoogleAI:
         team: Optional[str] = None,
         environment: Optional[str] = None,
         session_id: Optional[str] = None,
+        capture_payloads: str = "off",
+        redact=None,
     ):
         genai.configure(api_key=google_api_key)
         key = prism_key or os.environ.get("PRISM_API_KEY")
@@ -92,7 +94,7 @@ class PrismGoogleAI:
             git_ctx = _detect_git_context()
             sid = session_id or str(uuid.uuid4())
             default_tags = {**git_ctx, "session_id": sid}
-            self._tracker: Optional[EventTracker] = EventTracker(key, default_tags=default_tags)
+            self._tracker: Optional[EventTracker] = EventTracker(key, default_tags=default_tags, capture_payloads=capture_payloads, redact=redact)
             self._budget:  Optional[BudgetChecker] = BudgetChecker(key)
         else:
             warnings.warn(

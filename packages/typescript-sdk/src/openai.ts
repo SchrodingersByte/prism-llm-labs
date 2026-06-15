@@ -169,6 +169,8 @@ export class OpenAI extends OriginalOpenAI {
       const costCenter = process.env["PRISM_COST_CENTER"];
       if (costCenter) defaultTags["cost_center"] = costCenter;
       this._tracker     = new EventTracker(key, ingestUrl, defaultTags);
+      this._tracker.capturePayloads = options.capturePayloads ?? "off";
+      this._tracker.redact          = options.redact;
       this._budget      = new BudgetChecker(key);
       this._softCapModel = softCapModel;
       this._softCapPct   = softCapPct ?? 80;

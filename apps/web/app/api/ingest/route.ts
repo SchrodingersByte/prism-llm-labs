@@ -7,6 +7,7 @@ import { ingestRatelimit } from "@/lib/upstash/ratelimit";
 import { planToTtlDays } from "@/lib/pricing/table";
 import { checkOrgModelPolicy } from "@/lib/gateway/model-policy";
 import { autoPauseKey } from "@/lib/gateway/auto-pause";
+import { writeContent } from "@/lib/content/store";
 import { z } from "zod";
 
 const EventSchema = z.object({
@@ -38,6 +39,15 @@ const EventSchema = z.object({
   trace_id:       z.string().default(""),
   span_id:        z.string().default(""),
   parent_span_id: z.string().default(""),
+  // PRD-0 — optional captured content. Persisted (redacted) to request_logs via
+  // writeContent(); stripped before Tinybird so raw content never leaves for analytics.
+  payload: z.object({
+    prompt:       z.array(z.unknown()).optional(),
+    completion:   z.string().optional(),
+    context:      z.array(z.unknown()).optional(),
+    tool_io:      z.array(z.unknown()).optional(),
+    pre_redacted: z.boolean().optional(),
+  }).optional(),
 });
 
 const BatchSchema = z.object({
@@ -99,7 +109,7 @@ export async function POST(req: NextRequest) {
   // cap pre-check simply no-ops and user attribution falls back to "".
   const { data: keyRow } = await supabaseAdmin
     .from("api_keys")
-    .select("id, org_id, project_id, is_active, expires_at, auto_paused_at, auto_pause_reason, key_prefix, organizations(plan)")
+    .select("id, org_id, project_id, is_active, expires_at, auto_paused_at, auto_pause_reason, key_prefix, prompt_logging_enabled, organizations(plan)")
     .eq("key_hash", keyHash)
     .eq("is_active", true)
     .maybeSingle();
@@ -316,6 +326,10 @@ export async function POST(req: NextRequest) {
     prism_cache_hit:  0,             // not applicable in SDK mode
   }));
 
+  // PRD-0: drop captured content from the Tinybird payload (it is persisted,
+  // redacted, to request_logs via writeContent() below; raw content stays out of Tinybird).
+  for (const o of sanitised) delete (o as { payload?: unknown }).payload;
+
   // Gap 4 â€” atomic hard-cap enforcement before ingesting
   const byProject = new Map<string, number>();
   for (const e of sanitised) {
@@ -395,6 +409,39 @@ export async function POST(req: NextRequest) {
       .eq("key_hash", keyHash);
 
     return NextResponse.json({ error: "upstream_unavailable" }, { status: 502 });
+  }
+
+  // ── PRD-0: persist captured content (fire-and-forget; never blocks ingest) ──
+  {
+    const promptLoggingEnabled = (keyRow as { prompt_logging_enabled?: boolean }).prompt_logging_enabled ?? false;
+    const keyProjectId         = (keyRow as { project_id?: string | null }).project_id ?? null;
+    for (const e of events) {
+      const p = e.payload;
+      if (!p) continue;
+      void writeContent({
+        orgId:        keyRow.org_id,
+        source:       "sdk",
+        apiKeyId:     (keyRow as { id: string }).id,
+        projectId:    keyProjectId || e.project_id || null,
+        eventId:      e.event_id,
+        model:        e.model,
+        provider:     e.provider,
+        prompt:       p.prompt,
+        completion:   p.completion ?? null,
+        context:      p.context,
+        toolIo:       p.tool_io,
+        inputTokens:  e.input_tokens,
+        outputTokens: e.output_tokens,
+        costUsd:      e.cost_usd,
+        latencyMs:    e.latency_ms,
+        statusCode:   e.status_code,
+        sessionId:    e.tags?.session_id,
+        traceId:      e.trace_id,
+        spanId:       e.span_id,
+        preRedacted:  p.pre_redacted,
+        promptLoggingEnabled,
+      });
+    }
   }
 
   // Increment Redis for non-hard-cap projects (those not already atomically incremented)

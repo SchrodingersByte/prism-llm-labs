@@ -86,7 +86,7 @@ export class PrismAnthropic extends Anthropic {
   private _env:     string;
 
   constructor(options: ClientOptions & PrismOptions = {}) {
-    const { prismKey, project, team, environment, ingestUrl, mode, sessionId, traceId, softCapModel, softCapPct, ...base } = options;
+    const { prismKey, project, team, environment, ingestUrl, mode, sessionId, traceId, softCapModel, softCapPct, capturePayloads, redact, ...base } = options;
 
     const key = prismKey ?? process.env["PRISM_API_KEY"];
 
@@ -116,6 +116,8 @@ export class PrismAnthropic extends Anthropic {
       const sid = sessionId ?? crypto.randomUUID();
       const defaultTags = { ...gitCtx, session_id: sid };
       this._tracker     = new EventTracker(key, ingestUrl, defaultTags);
+      this._tracker.capturePayloads = capturePayloads ?? "off";
+      this._tracker.redact          = redact;
       this._budget      = new BudgetChecker(key);
       this._softCapModel = softCapModel;
       this._softCapPct   = softCapPct ?? 80;
