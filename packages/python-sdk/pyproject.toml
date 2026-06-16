@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "prism-llm-labs"
-version = "0.3.4"
+version = "0.4.0"
 description = "LLM cost and usage observability SDK"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -38,6 +38,9 @@ all = [
   "langchain-core>=0.3.0",
   "mcp>=1.0.0",
 ]
+
+[project.scripts]
+prism-evals = "prism.evals:run_eval_cli"
 
 [tool.hatch.build]
 ignore-vcs = true

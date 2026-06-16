@@ -1,10 +1,17 @@
 {
   "name": "@prism-llm-labs/sdk",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "TypeScript SDK for Prism LLM observability",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "prism-evals": "./bin/prism-evals.mjs"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

@@ -29,6 +29,9 @@ from prism._config            import configure
 from prism.middleware         import prism_feature, prism_tags, PrismMiddleware, get_current_feature
 from prism.trace              import trace, get_current_trace, TraceContext
 from prism.circuit_breaker    import PrismCircuitOpenError, is_circuit_open, record_provider_error, reset_breaker
+from prism.evals              import run_eval, gate_eval, EvalResult, EvalGateError
+from prism.feedback           import send_feedback
+from prism.prompts            import get_prompt, clear_prompt_cache, ResolvedPrompt
 
 # Canonical symmetric names — preferred going forward
 PrismOpenAI      = OpenAI
@@ -118,4 +121,15 @@ __all__ = [
     "is_circuit_open",
     "record_provider_error",
     "reset_breaker",
+    # Offline-eval CI helper (PRD-2)
+    "run_eval",
+    "gate_eval",
+    "EvalResult",
+    "EvalGateError",
+    # End-user feedback helper (PRD-3)
+    "send_feedback",
+    # Prompt registry fetch (PRD-4)
+    "get_prompt",
+    "clear_prompt_cache",
+    "ResolvedPrompt",
 ]
