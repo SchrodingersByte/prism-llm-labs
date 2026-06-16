@@ -156,3 +156,42 @@ CREATE TRIGGER annotation_queue_updated_at BEFORE UPDATE ON public.annotation_qu
 - **E2E:** `prism.feedback()` from SDK → row visible; thumbs aggregate per feature; judge↔human
   agreement computable (closes PRD-1 loop).
 - **Gates:** `tsc`/`lint`/`build`; SDK TS `vitest` + Python `pytest`.
+
+---
+
+## 10. Build status & corrections (2026-06-15 — backend COMPLETE; migration APPLIED)
+All backend phases implemented and verified (web `tsc` + `next build` clean — all 4 routes registered;
+TS `vitest` 35/35, Python `pytest` 33/33; ESLint clean on new files). The migration is **applied to
+staging** (both tables + RLS + `feature_tag` + de-dupe index verified live; recorded in CLI history).
+
+**Shipped files**
+- **P3.1** `supabase/migrations/20260615130000_feedback_annotation.sql` — `feedback` + `annotation_queue`
+  (+ RLS, indexes, `updated_at` trigger, a partial-unique index for open-item de-dupe).
+- **P3.2** `app/api/feedback/route.ts` (POST key-authed ingest + GET aggregation) + SDK standalone
+  `sendFeedback` (TS `src/feedback.ts`) / `send_feedback` (Py `prism/feedback.py`).
+- **P3.3** `app/api/annotations/queue/route.ts` (GET/POST) + sampler auto-enqueue (`enqueueEdgeCases`
+  in `cron/run-online-evals`).
+- **P3.4** `app/api/annotations/queue/[id]/route.ts` (claim/skip/submit → human `eval_scores`).
+- **P3.5** span-level annotation (submit accepts `span_id`) + `app/api/annotations/export/route.ts`
+  (annotations → PRD-2 dataset, with human score in sample `tags`).
+
+**Corrections to the original design (and why)**
+1. **`feedback` table gained a `feature_tag` column** (not in the §3 sketch) — required for the
+   "thumbs aggregation per feature" success metric; the GET groups by it.
+2. **Ingest uses `authenticateIngestKey`** (not the inline key check from `outcomes/route.ts`) — it adds
+   the `ingestRatelimit` the §8 spam risk calls for, in one helper.
+3. **SDK surface is a standalone `sendFeedback`/`send_feedback`**, not a tracker method, mirroring the
+   PRD-2 `runEval` helper. It auto-fills `trace_id`/`span_id` from the active trace context, so it links
+   correctly without a provider-client instance. (`recordOutcome` is only on `EventTracker`, an awkward
+   reach for a 👍 handler.)
+4. **No Tinybird `feedback_events` mirror in v1** — the GET aggregation reads Supabase directly; the
+   datasource would need a `tb deploy` (out of scope). Add the mirror when feedback volume needs it.
+5. **Comments are PII-masked** with `lib/privacy/pii-masker.maskPii` on both the ingest path and the
+   reviewer-comment path before storage (§8 risk).
+6. **Open-item de-dupe** via a partial unique index `(org_id, trace_id, coalesce(span_id,''))
+   WHERE status IN ('pending','in_review')` + a pre-check in the manual-enqueue path, so the sampler and
+   manual adds can't pile duplicate review items.
+
+**Still pending (out of this backend scope):** all PRD-3 UI (spec in
+`docs/frontend/pending-ui.md` §3 Phase 3); the judge↔human agreement view (data is now collectable —
+human rows in `eval_scores`); optional Tinybird feedback mirror.

@@ -131,4 +131,53 @@ Gateway needed NO changes — the dev app had already slimmed `api_keys` (auth S
 
 # ✅ APP PORT COMPLETE 2026-06-13 — WS0–WS7
 Staging app builds clean against the new 4-role + scope RBAC. Migrations now: 120000–180000 (schema) · 185000 trace_rollup_fn · 190000 projects_fixes · 191000 log_access (last 3 added during the port). Remaining = optional follow-ups only: pre-existing lint debt cleanup; live HTTP route matrix; deploy/env wiring (Tinybird/Upstash/Stripe creds already in `.env`).
+
+## GitHub + Vercel (2026-06-13)
+- **Repo:** `github.com/SchrodingersByte/prism-llm-labs` (PRIVATE), pushed as a FRESH single-commit history (the old commit `06775a1` had `.env` committed — discarded so no secrets reached GitHub). `.gitignore` covers `.env*`/`.tinyb`/`node_modules`; **`examples/` excluded** (had a hardcoded live OpenAI key). gh account: SchrodingersByte.
+- **Workflows:** scoped `ci.yml` to web tsc+build on `main`; disabled (`*.yml.disabled`) publish-npm/pypi, pricing-parity, deploy, deploy-tinybird, cron-alerts, cron-reports. Added `.gitattributes` (eol=lf).
+- **Vercel:** CLI installed + authed as `schrodingersbyte`. Project **`dip-dey-s-projects/prism-llm-labs`** created/linked (root `apps/web`, Next.js). NOT yet git-connected (monorepo: CLI can't see root `.git` + `apps/web/.vercel` together → use dashboard) and NO env vars set (CLI stdin is eaten by the vercel Claude-plugin wrapper → use dashboard paste).
+- **SDKs:** stay in dev — npm/PyPI aren't repo-bound; staging just consumes them.
+- ⚠️ **TODO for user:** (1) ROTATE the OpenAI key (it's hardcoded in the DEV repo's `examples/`). (2) `ENCRYPTION_SECRET` is MISSING from `.env` but the app needs it for provider-key AES encryption — generate + set in Vercel + local. (3) set `NEXT_PUBLIC_APP_URL` to the staging domain.
 - tsc 0 throughout.
+
+# Quality & Intelligence roadmap (docs/prd + docs/implementation, 8 PRDs)
+Phased build of the quality loop. PRD-0 (content/embedding capture) + PRD-1 (online eval / LLM-judge) backends already built before this session (commits c02ae5f, 0956ff2). All frontend tracked in `docs/frontend/pending-ui.md` (the UI is far behind the backend; ~52 pages still stubs).
+
+## PRD-2 — Offline Evals, Datasets & Experiments (BACKEND DONE 2026-06-15)
+Dev-loop quality: prove a prompt/model/config change is better BEFORE shipping, + CI gates. Datasets/runs/scores tables already existed — this added the experiment runner + compare + CI helper.
+- **P2.1** migration `20260615120000_experiments.sql` — `evaluation_runs` + `kind`(validation|experiment), `name`, `git_sha`, `config_snapshot` jsonb, `baseline_run_id`, `project_id` + index `(org_id,kind,created_at)`. No new tables (datasets stay inline `samples` jsonb; scores reuse `eval_scores`, free-text `scorer_type`).
+- **P2.2** `lib/eval/runner.ts` (`runExperiment`) + `app/api/evaluations/experiments` (POST run / GET list). Runs a subject (model+system_prompt+params) over a dataset → scores each sample → aggregates score/cost/edge_cases onto the run + writes `eval_scores`.
+- **Execution:** NEW `lib/arena/execute.ts` = session-less provider dispatch extracted from `arena/chat` (that route is `requireAuth`-gated; the runner has no session). `executeModelCall(admin,{orgId,providerKeyId,model,messages,params})` → completion+usage+cost; captures Tinybird `environment="experiment"`. `resolveProviderKey` auto-picks the org's active key for the model's provider.
+- **Scorers:** added `correctness` (vs gold `expected_output`) + deterministic `exact_match` (no judge call → flake-free CI) to `lib/eval/judges.ts`; `ScorerInput.reference` added.
+- **P2.3** `app/api/evaluations/datasets/from-traces` — request_logs (PRD-0 content) → `{input, expected_output}` samples, append/create dataset (≤500 inline cap).
+- **P2.4** `GET /api/evaluations/scores?run_ids=a,b` compare branch — per-run quality+cost + per-scorer breakdown + Δ vs baseline + regression flag.
+- **P2.5** SDK CI gate (TS+Py parity): `runEval`/`gateEval`/`runEvalCli` + `bin prism-evals` (TS v0.5.0); `run_eval`/`gate_eval`/`run_eval_cli` + `prism-evals` console script (Py v0.4.0). Both POST `/api/evaluations/experiments`. `/experiments` accepts **dual auth: browser session (canWriteOrg) OR Prism API key** (`authenticateIngestKey`) — the API-key path is what makes CI work.
+- **Runner transport:** synchronous inside the POST (samples capped 50, concurrency 4) — primary consumer is a headless CI gate that blocks on the verdict; SSE/Redis (validate pattern) is browser-driven. Async/Redis for >50 samples = follow-up.
+- **Verified:** web `tsc` + `next build` clean (both new routes registered); web runner unit tests `tests/experiments.test.ts` 3/3; TS vitest 32/32 (+`tests/evals.test.ts`); Python pytest 30/30 (+`tests/test_evals.py`).
+- **Migration APPLIED to staging 2026-06-15** via the scratch `db.mjs` runner (session pooler) + recorded in `supabase_migrations.schema_migrations` (version 20260615120000, name `experiments`). Columns + index verified live.
+- **SDKs bumped but NOT published:** TS `@prism-llm-labs/sdk` 0.4.4→0.5.0, Py `prism-llm-labs` 0.3.4→0.4.0. No git tags created (publish workflows are tag-triggered). The unreleased 0.5.0/0.4.0 now also carry PRD-3's `sendFeedback` (below).
+- **Pending:** all PRD-2 UI (spec in pending-ui.md §3 Phase 2); `prompt_version` is a passthrough label until PRD-4 prompt registry lands.
+- Design + corrections recorded in `docs/implementation/02-offline-evals-datasets-experiments.impl.md` §10.
+
+## PRD-3 — Feedback & Annotation Queues (BACKEND DONE 2026-06-15; migration NOT applied)
+Human-in-the-loop: end-user thumbs + a reviewer annotation queue. Reviewer scores land in the existing `eval_scores` (`scorer_type='human'`) — closes the judge↔human calibration loop with PRD-1.
+- **P3.1** migration `20260615130000_feedback_annotation.sql` — `feedback` (+`feature_tag` for per-feature thumbs) + `annotation_queue` (status/priority/reason/assignee, partial-unique open-item de-dupe, `updated_at` trigger). **APPLIED to staging 2026-06-15** + recorded in history (name `feedback_annotation`); tables/policies/feature_tag/dedupe-index verified live.
+- **P3.2** `app/api/feedback` (POST key-authed ingest via `authenticateIngestKey` + rate-limit + `maskPii` on comments; GET aggregation by feature) + SDK standalone `sendFeedback`(TS)/`send_feedback`(Py), auto-fills trace/span from active trace context.
+- **P3.3** `app/api/annotations/queue` (GET prioritized / POST manual enqueue, de-duped) + sampler auto-enqueue: `enqueueEdgeCases` in `cron/run-online-evals` (worst 10 failed scores/run → queue, skip already-open).
+- **P3.4** `app/api/annotations/queue/[id]` PUT claim/skip/submit; submit writes `eval_scores` human + closes item. Span-level = pass `span_id`.
+- **P3.5** `app/api/annotations/export` → builds a PRD-2 dataset from reviewed items (joins `request_logs` content + human `eval_scores` into sample tags).
+- **Corrections:** added `feature_tag`; `authenticateIngestKey` (rate-limit) not inline key check; standalone SDK helper (not a tracker method); no Tinybird feedback mirror in v1; PII-masked comments. See impl doc 03 §10.
+- **Verified:** web `tsc` + `next build` clean (4 routes registered); TS vitest 35/35 (+`tests/feedback.test.ts`); Python pytest 33/33 (+`tests/test_feedback.py`); ESLint clean.
+- **Pending:** all PRD-3 UI (pending-ui.md §3 Phase 3); judge↔human agreement view.
+- **How to apply migrations:** scratch runner `C:\Users\ddeyp\prism-apply-scratch\db.mjs` with PG* env (session pooler `aws-1-ap-southeast-2.pooler.supabase.com:5432`, user `postgres.irehykmlliwarkcyzeqg`, pw from `.env` `SUPABASE_DATABASE_PASSWORD`): `db.mjs apply <file>` then record the version row in `supabase_migrations.schema_migrations`. See [[supabase-staging-connection]].
+
+## PRD-4 — Prompt Management & Playground (BACKEND DONE 2026-06-15; migration NOT applied)
+Langfuse-style prompt registry: named prompts → immutable versions → movable labels. Decouples prompt changes from code deploys. Playground = UI on the EXISTING `/api/arena/chat` (no new execution path).
+- **P4.1** migration `20260615140000_prompt_registry.sql` — `prompts`/`prompt_versions`(immutable: `BEFORE UPDATE` trigger raises)/`prompt_labels` (movable pointer, UNIQUE(prompt_id,label)) + RLS + indexes + `updated_at` triggers. **APPLIED to staging 2026-06-15** + recorded in history (name `prompt_registry`); 3 tables/6 policies/immutability-trigger/guard-fn verified live.
+- **P4.2** `app/api/prompts` (GET list+labels+latest / POST create) · `[id]` (GET detail / PATCH desc / DELETE) · `[id]/versions` (GET / POST append `version=max+1`, retry on race) · `[id]/labels` (GET / PUT promote-upsert / DELETE).
+- **P4.3** `app/api/prompts/resolve` (dual auth key|session; resolve order version→label→'production'→latest, project-preference) + SDK `getPrompt`(TS)/`get_prompt`(Py): cached (TTL, label-keyed), `{{var}}` compile, returns `promptVersion="name@version"` → caller stamps `tags['prompt_version']` (lights up existing `spend_by_prompt_version` pipe, NO pipe change).
+- **P4.6** experiments route now accepts `subject.prompt_id`+`prompt_label` → resolves system prompt + `name@version` server-side (registry prompt as a first-class experiment subject).
+- **Corrections:** version immutability enforced at BOTH API + DB-trigger layers; standalone SDK helper (not a client method); `commit_msg` added to versions. See impl doc 04 §10.
+- **Verified:** web `tsc` + `next build` clean (5 routes registered); TS vitest 41/41 (+`tests/prompts.test.ts`); Python pytest 38/38 (+`tests/test_prompts.py`); ESLint clean.
+- **Pending:** all PRD-4 UI (Prompts page/diff/label-promote/playground — pending-ui.md §3 Phase 4).
+- **SDKs** (unpublished) now carry PRD-2 `runEval` + PRD-3 `sendFeedback` + PRD-4 `getPrompt` in the same TS 0.5.0 / Py 0.4.0.

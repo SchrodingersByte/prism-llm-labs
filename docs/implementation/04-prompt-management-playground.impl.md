@@ -142,3 +142,41 @@ CREATE INDEX idx_pv_prompt      ON public.prompt_versions(prompt_id, version DES
 - **E2E:** create prompt → playground run vs 2 models → promote `production` → SDK `getPrompt` returns
   new version without redeploy.
 - **Gates:** `tsc`/`lint`/`build`; SDK TS `vitest` + Python `pytest`.
+
+---
+
+## 10. Build status & corrections (2026-06-15 — backend COMPLETE; migration APPLIED)
+All backend phases implemented and verified (web `tsc` + `next build` clean — all 5 routes registered;
+TS `vitest` 41/41, Python `pytest` 38/38; ESLint clean on new files). The migration is **applied to
+staging** (3 tables + 6 RLS policies + the immutability trigger/guard fn verified live; recorded in CLI history).
+The **playground (P4.4) and the diff/version UI (P4.5) are frontend** — spec'd as pending in
+`docs/frontend/pending-ui.md` §3 Phase 4 — and reuse the existing `/api/arena/chat` with no backend change.
+
+**Shipped files**
+- **P4.1** `supabase/migrations/20260615140000_prompt_registry.sql` — `prompts` / `prompt_versions`
+  (immutable: a `BEFORE UPDATE` trigger raises) / `prompt_labels` + RLS + indexes + `updated_at` triggers.
+- **P4.2** `app/api/prompts/route.ts` (GET list w/ labels+latest, POST create) · `[id]` (GET detail,
+  PATCH desc, DELETE) · `[id]/versions` (GET, POST append `version=max+1`) · `[id]/labels` (GET, PUT
+  promote/upsert, DELETE).
+- **P4.3** `app/api/prompts/resolve/route.ts` (dual auth: Prism key or session) + SDK `getPrompt`
+  (TS `src/prompts.ts`) / `get_prompt` (Py `prism/prompts.py`) — cached, with `{{variable}}` compile and
+  a `promptVersion` string to stamp as `tags['prompt_version']`.
+- **P4.6** Experiment subject hook: `POST /api/evaluations/experiments` accepts
+  `subject.prompt_id` (+ `prompt_label`) and resolves the system prompt + `name@version` server-side.
+
+**Corrections to the original design (and why)**
+1. **Version immutability is enforced at BOTH layers** — no UPDATE route *and* a DB `BEFORE UPDATE`
+   trigger that raises. The §3 note left the trigger optional; belt-and-suspenders is cheap and prevents
+   an admin-client write from silently mutating a "version of record."
+2. **`resolve` takes dual auth** (Prism API key for the SDK, session for the playground) and resolves by
+   name with project-preference (project match → org-level `null` → first), then `version` → `label` →
+   `production` → latest. Adds `commit_msg` to versions for a human-readable history.
+3. **SDK surface is a standalone `getPrompt`/`get_prompt`** (env-keyed, in-memory TTL cache, label-keyed
+   invalidation, `{{var}}` compile) mirroring the PRD-2/PRD-3 helpers — not a method bolted onto the
+   provider-wrapper client. Caller passes `promptVersion` as the attribution tag (kept explicit so the
+   helper stays provider-agnostic).
+4. **No pipe changes** — resolved calls carrying `tags['prompt_version']` light up the existing
+   `spend_by_prompt_version` pipe + `/api/metrics/prompt-versions` automatically (as designed).
+
+**Still pending (out of this backend scope):** all PRD-4 UI (Prompts page, version
+diff, label promote, playground) — spec in `docs/frontend/pending-ui.md` §3 Phase 4.
