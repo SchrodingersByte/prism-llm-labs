@@ -1,0 +1,33 @@
+DESCRIPTION >
+    Daily online-eval quality trend (PRD-1): average judge score + pass rate per
+    day, optionally filtered by scorer_type / model / project. Fed by the
+    eval_score_events mirror written by the run-online-evals sampler. Powers the
+    Quality dashboard trend chart and the quality_drop alert.
+
+NODE raw
+SQL >
+    %
+    SELECT
+        toDate(scored_at)  AS date,
+        count()            AS scores,
+        avg(score)         AS avg_score_raw,
+        sum(passed)        AS passed_count
+    FROM eval_score_events
+    WHERE org_id = {{ String(org_id, '') }}
+      AND scored_at >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND scored_at <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      AND ({{ String(scorer_type, '') }} = '' OR scorer_type = {{ String(scorer_type, '') }})
+      AND ({{ String(model, '') }} = '' OR model = {{ String(model, '') }})
+    GROUP BY date
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    SELECT
+        date,
+        scores,
+        round(avg_score_raw, 4)                  AS avg_score,
+        if(scores > 0, passed_count / scores, 0) AS pass_rate
+    FROM raw
+    ORDER BY date

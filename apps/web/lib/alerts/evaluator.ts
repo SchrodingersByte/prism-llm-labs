@@ -317,6 +317,53 @@ async function checkPiiDetection(rule: AlertRule): Promise<{ fires: boolean; val
   };
 }
 
+// PRD-5: fire when the latest overall embedding drift (PSI) crosses the threshold
+// (rule of thumb: 0.25 = significant shift). Reads drift_metrics written by the
+// compute-drift cron.
+async function checkDrift(rule: AlertRule): Promise<{ fires: boolean; value: number }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (getAdmin() as any)
+    .from("drift_metrics")
+    .select("value, computed_at")
+    .eq("org_id", rule.org_id)
+    .eq("segment", "all")
+    .eq("metric", "psi")
+    .order("computed_at", { ascending: false })
+    .limit(1) as { data: { value: number | null }[] | null };
+
+  const value = data?.[0]?.value;
+  if (value == null) return { fires: false, value: 0 };
+  return { fires: Number(value) >= rule.threshold_value, value: Number(value) };
+}
+
+// PRD-1 (P1.7): fire when the most-recent day's online-eval pass-rate drops by
+// >= threshold_value (e.g. 0.1 = a 10-point drop) versus the trailing baseline.
+// Reads quality_timeseries (fed by the eval_score_events mirror). Requires a
+// minimum of scores in both windows so a thin day can't trip it.
+async function checkQualityDrop(rule: AlertRule): Promise<{ fires: boolean; value: number }> {
+  const now  = new Date();
+  const from = new Date(now.getTime() - 14 * 86_400_000);
+  const rows = await queryTb("quality_timeseries", {
+    org_id:    rule.org_id,
+    from_date: tbDate(from),
+    to_date:   tbDate(now),
+  }) as { date: string; scores: number; pass_rate: number }[];
+
+  if (rows.length < 2) return { fires: false, value: 0 };
+  const sorted   = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+  const latest   = sorted[sorted.length - 1]!;
+  const baseline = sorted.slice(0, -1);
+
+  const recentScores = latest.scores ?? 0;
+  const baseScores   = baseline.reduce((s, r) => s + (r.scores ?? 0), 0);
+  if (recentScores < 3 || baseScores < 5) return { fires: false, value: 0 };
+
+  // Volume-weighted baseline pass-rate (each day's pass_rate weighted by its score count).
+  const baseRate = baseline.reduce((s, r) => s + (r.pass_rate ?? 0) * (r.scores ?? 0), 0) / baseScores;
+  const drop     = baseRate - (latest.pass_rate ?? 0);
+  return { fires: drop >= rule.threshold_value, value: Math.round(drop * 10000) / 10000 };
+}
+
 // â”€â”€ Cooldown check (1 hour between firings per rule) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function isOnCooldown(rule: AlertRule): boolean {
@@ -380,6 +427,8 @@ async function evaluateRule(rule: AlertRule): Promise<void> {
     case "session_budget_threshold":result = await checkSessionBudgetThreshold(rule); break;
     case "velocity_spike":          result = await checkVelocitySpike(rule);          break;
     case "pii_detection":           result = await checkPiiDetection(rule);           break;
+    case "drift":                   result = await checkDrift(rule);                  break;
+    case "quality_drop":            result = await checkQualityDrop(rule);            break;
     default: return;
   }
 

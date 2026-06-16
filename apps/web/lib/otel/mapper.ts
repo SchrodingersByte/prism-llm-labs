@@ -79,12 +79,43 @@ export interface LLMEventLike {
   parent_span_id: string;
 }
 
+export interface SpanLike {
+  span_id:        string;
+  trace_id:       string;
+  parent_span_id: string;
+  org_id:         string;
+  project_id:     string;
+  span_kind:      string;   // retrieval | tool | chain | custom
+  name:           string;
+  service:        string;
+  start_ts:       string;   // "YYYY-MM-DD HH:MM:SS.mmm"
+  latency_ms:     number;
+  status:         string;   // ok | error
+  attributes:     string;   // JSON: span attrs (+ error message on failure)
+  ttl_days:       number;
+}
+
 function isLlmSpan(attrs: Record<string, unknown>): boolean {
   return (
     "gen_ai.system"        in attrs ||
     "gen_ai.request.model" in attrs ||
     "llm.vendor"           in attrs  // OpenLLMetry compat
   );
+}
+
+/** Classify a non-LLM span into a coarse kind for the trace tree / error explorer. */
+function classifySpanKind(attrs: Record<string, unknown>, name: string): string {
+  const hint = (
+    getStr(attrs, "openinference.span.kind") ||
+    getStr(attrs, "gen_ai.operation.name")   ||
+    getStr(attrs, "traceloop.span.kind")     ||
+    ""
+  ).toLowerCase();
+  const hay = `${hint} ${(name || "").toLowerCase()}`;
+  if (/(retriev|embedding|vector|search|rerank)/.test(hay))    return "retrieval";
+  if (/(tool|function)/.test(hay) || "tool.name" in attrs || "gen_ai.tool.name" in attrs) return "tool";
+  if (/(chain|agent|workflow|graph|pipeline)/.test(hay))       return "chain";
+  return "custom";
 }
 
 function spanToEvent(
@@ -164,10 +195,48 @@ function spanToEvent(
   };
 }
 
+/** Build a non-LLM span row for the `spans` datasource (retrieval/tool/chain/custom). */
+function spanToSpanRow(
+  span:          OtlpSpan,
+  spanAttrs:     Record<string, unknown>,
+  resourceAttrs: Record<string, unknown>,
+  orgId:         string,
+  ttlDays:       number,
+): SpanLike {
+  const startNs     = BigInt(span.startTimeUnixNano);
+  const endNs       = BigInt(span.endTimeUnixNano);
+  const latencyMs   = Number((endNs - startNs) / BigInt(1_000_000));
+  const timestampMs = Number(startNs / BigInt(1_000_000));
+  const start_ts    = new Date(timestampMs).toISOString().replace("T", " ").slice(0, 23);
+  const projectId   = getStr(resourceAttrs, "service.name") || getStr(resourceAttrs, "service.namespace") || "";
+  const isError     = span.status?.code === 2;
+
+  const attrObj: Record<string, string> = {};
+  for (const [k, v] of Object.entries(spanAttrs)) attrObj[k] = String(v ?? "");
+  if (isError && span.status?.message) attrObj.error = String(span.status.message);
+
+  return {
+    span_id:        span.spanId,
+    trace_id:       span.traceId,
+    parent_span_id: span.parentSpanId ?? "",
+    org_id:         orgId,
+    project_id:     projectId,
+    span_kind:      classifySpanKind(spanAttrs, span.name),
+    name:           span.name || "span",
+    service:        getStr(resourceAttrs, "service.name"),
+    start_ts,
+    latency_ms:     Math.max(0, latencyMs),
+    status:         isError ? "error" : "ok",
+    attributes:     JSON.stringify(attrObj).slice(0, 4000),
+    ttl_days:       ttlDays,
+  };
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface MapResult {
   events:  LLMEventLike[];
+  spans:   SpanLike[];
   skipped: number;
 }
 
@@ -178,6 +247,7 @@ export function mapOtlpToEvents(
   ttlDays:  number = 30,
 ): MapResult {
   const events:  LLMEventLike[] = [];
+  const spans:   SpanLike[]     = [];
   let   skipped                 = 0;
 
   for (const rs of payload.resourceSpans ?? []) {
@@ -186,7 +256,17 @@ export function mapOtlpToEvents(
     for (const ss of rs.scopeSpans ?? []) {
       for (const span of ss.spans ?? []) {
         const spanAttrs = buildAttrMap(span.attributes);
-        if (!isLlmSpan(spanAttrs)) { skipped++; continue; }
+
+        // LLM spans → llm_events; every other span → the spans DS (PRD-6 span
+        // retention) rather than being dropped.
+        if (!isLlmSpan(spanAttrs)) {
+          try {
+            spans.push(spanToSpanRow(span, spanAttrs, resourceAttrs, orgId, ttlDays));
+          } catch {
+            skipped++;
+          }
+          continue;
+        }
 
         try {
           events.push(spanToEvent(span, spanAttrs, resourceAttrs, orgId, apiKeyId, ttlDays));
@@ -197,5 +277,5 @@ export function mapOtlpToEvents(
     }
   }
 
-  return { events, skipped };
+  return { events, spans, skipped };
 }

@@ -6,7 +6,11 @@
  * Returns per-model averages:
  *   { model, avg_score, pass_rate, sample_count, avg_cost_usd, efficiency }
  *
- * Also accepts ?eval_run_id=... to drill into a specific run.
+ * Also accepts:
+ *   ?eval_run_id=...        drill into a specific run (raw scores)
+ *   ?run_ids=a,b,c          compare 2+ experiment runs side by side (PRD-2):
+ *                           per-run quality + cost + per-scorer breakdown +
+ *                           deltas vs the baseline run + a regression flag.
  *
  * POST — record individual eval scores (called by the scorer engine or
  *        by external integrations sending human feedback).
@@ -32,9 +36,89 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const url       = new URL(req.url);
   const evalRunId = url.searchParams.get("eval_run_id") ?? undefined;
+  const runIdsRaw = url.searchParams.get("run_ids") ?? undefined;
+  const regThresh = Number(url.searchParams.get("regression_threshold") ?? 0.05);
   const limit     = Math.min(Number(url.searchParams.get("limit") ?? 200), 500);
 
   const admin = createAdminClient();
+
+  // ── Compare 2+ experiment runs (PRD-2) ────────────────────────────────────
+  if (runIdsRaw) {
+    const runIds = runIdsRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 10);
+    if (runIds.length === 0) return NextResponse.json({ compare: [] });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: runs } = await (admin as any)
+      .from("evaluation_runs")
+      .select("id, name, status, overall_score, n_samples, edge_cases, cost_usd, config_snapshot, baseline_run_id")
+      .eq("org_id", member.org_id)
+      .in("id", runIds);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: scoreRows } = await (admin as any)
+      .from("eval_scores")
+      .select("eval_run_id, scorer_type, score, passed")
+      .eq("org_id", member.org_id)
+      .in("eval_run_id", runIds);
+
+    // Per-run, per-scorer breakdown.
+    type Agg = { sum: number; pass: number; n: number };
+    const byRun = new Map<string, Map<string, Agg>>();
+    for (const r of (scoreRows ?? []) as Array<{ eval_run_id: string; scorer_type: string; score: number | null; passed: boolean | null }>) {
+      if (r.score == null) continue;
+      if (!byRun.has(r.eval_run_id)) byRun.set(r.eval_run_id, new Map());
+      const m = byRun.get(r.eval_run_id)!;
+      if (!m.has(r.scorer_type)) m.set(r.scorer_type, { sum: 0, pass: 0, n: 0 });
+      const a = m.get(r.scorer_type)!;
+      a.sum += Number(r.score); a.n++; if (r.passed) a.pass++;
+    }
+
+    // Baseline = a run referenced as baseline_run_id by another run in the set, else the first.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const runList = (runs ?? []) as any[];
+    const ordered = runIds.map(id => runList.find(r => r.id === id)).filter(Boolean);
+    const referenced = ordered.find(r => r.baseline_run_id && runIds.includes(r.baseline_run_id))?.baseline_run_id;
+    const baselineId = referenced ?? ordered[0]?.id ?? null;
+    const baseline   = ordered.find(r => r.id === baselineId) ?? ordered[0] ?? null;
+    const baseScore  = baseline?.overall_score != null ? Number(baseline.overall_score) : null;
+    const baseCost   = baseline?.cost_usd != null ? Number(baseline.cost_usd) : null;
+
+    const compare = ordered.map(r => {
+      const scorerAgg = byRun.get(r.id) ?? new Map<string, Agg>();
+      const scorers: Record<string, { avg_score: number; pass_rate: number; count: number }> = {};
+      for (const [st, a] of Array.from(scorerAgg.entries())) {
+        scorers[st] = {
+          avg_score: Math.round((a.sum / a.n) * 10000) / 10000,
+          pass_rate: Math.round((a.pass / a.n) * 10000) / 10000,
+          count:     a.n,
+        };
+      }
+      const score = r.overall_score != null ? Number(r.overall_score) : null;
+      const cost  = r.cost_usd != null ? Number(r.cost_usd) : null;
+      const isBaseline  = r.id === baselineId;
+      const scoreDelta  = score != null && baseScore != null && !isBaseline ? Math.round((score - baseScore) * 10000) / 10000 : null;
+      const costDelta   = cost  != null && baseCost  != null && !isBaseline ? Math.round((cost - baseCost) * 1_000_000) / 1_000_000 : null;
+      const passRate    = r.n_samples ? Math.round(((r.n_samples - (r.edge_cases ?? 0)) / r.n_samples) * 10000) / 10000 : null;
+      return {
+        run_id:       r.id,
+        name:         r.name ?? null,
+        model:        r.config_snapshot?.model ?? null,
+        status:       r.status,
+        overall_score: score,
+        pass_rate:    passRate,
+        sample_count: r.n_samples ?? 0,
+        edge_cases:   r.edge_cases ?? 0,
+        cost_usd:     cost,
+        scorers,
+        is_baseline:  isBaseline,
+        score_delta:  scoreDelta,
+        cost_delta:   costDelta,
+        regression:   scoreDelta != null && scoreDelta < -Math.abs(regThresh),
+      };
+    });
+
+    return NextResponse.json({ compare, baseline_run_id: baselineId });
+  }
 
   // If a specific run is requested, return raw scores for that run
   if (evalRunId) {

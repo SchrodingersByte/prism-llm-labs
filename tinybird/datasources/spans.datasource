@@ -1,0 +1,19 @@
+SCHEMA >
+    `span_id`        String                 `json:$.span_id`,
+    `trace_id`       String                 `json:$.trace_id`,
+    `parent_span_id` String                 `json:$.parent_span_id`,
+    `org_id`         String                 `json:$.org_id`,
+    `project_id`     String                 `json:$.project_id`,
+    `span_kind`      LowCardinality(String) `json:$.span_kind`,
+    `name`           String                 `json:$.name`,
+    `service`        String                 `json:$.service`,
+    `start_ts`       DateTime64(3)          `json:$.start_ts`,
+    `latency_ms`     UInt32                 `json:$.latency_ms`,
+    `status`         LowCardinality(String) `json:$.status`,
+    `attributes`     String                 `json:$.attributes`,
+    `ttl_days`       UInt16                 `json:$.ttl_days`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(start_ts)"
+ENGINE_SORTING_KEY "org_id, trace_id, start_ts"
+ENGINE_TTL "toDateTime(start_ts) + INTERVAL ttl_days DAY"

@@ -75,10 +75,21 @@ export async function POST(req: NextRequest) {
   const orgId    = keyRow.org_id as string;
   const apiKeyId = (keyRow as { id: string }).id;
 
-  const { events, skipped } = mapOtlpToEvents(body, orgId, apiKeyId, ttlDays);
+  const { events, spans, skipped } = mapOtlpToEvents(body, orgId, apiKeyId, ttlDays);
+
+  // PRD-6: retain non-LLM spans (retrieval/tool/chain/custom) to the spans DS so
+  // they appear in the trace waterfall. Best-effort + capped — must never block
+  // LLM-event ingestion.
+  if (spans.length > 0) {
+    try {
+      await ingestToTinybird(spans.slice(0, 1000), "spans");
+    } catch (err) {
+      console.error("[otel] spans ingest failed:", err);
+    }
+  }
 
   if (events.length === 0) {
-    return NextResponse.json({ accepted: 0, skipped, message: "No LLM spans found" });
+    return NextResponse.json({ accepted: 0, spans: spans.length, skipped, message: "No LLM spans found" });
   }
 
   // Enforce batch limit (same as /api/ingest)
@@ -98,5 +109,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "upstream_unavailable" }, { status: 502 });
   }
 
-  return NextResponse.json({ accepted: events.length, skipped });
+  return NextResponse.json({ accepted: events.length, spans: spans.length, skipped });
 }

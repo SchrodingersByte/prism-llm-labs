@@ -15,6 +15,18 @@
     {
       "path": "/api/cron/build-recommendations",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/run-online-evals",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/purge-content",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/compute-drift",
+      "schedule": "0 5 * * *"
     }
   ]
 }

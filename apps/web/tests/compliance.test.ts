@@ -203,7 +203,7 @@ describe("Model governance policy", () => {
 
 // ── Tests: OTLP span filtering ────────────────────────────────────────────────
 describe("OTLP ingest — LLM span detection", () => {
-  it("mapOtlpToEvents filters out non-LLM spans", async () => {
+  it("mapOtlpToEvents separates LLM events from retained non-LLM spans (PRD-6)", async () => {
     const { mapOtlpToEvents } = await import("@/lib/otel/mapper");
     const payload = {
       resourceSpans: [{
@@ -238,7 +238,11 @@ describe("OTLP ingest — LLM span detection", () => {
 
     const result = mapOtlpToEvents(payload, "org-test", "key-001", 90);
     expect(result.events).toHaveLength(1);
-    expect(result.skipped).toBe(1);
+    // PRD-6: non-LLM spans are retained (→ spans DS), not dropped/skipped.
+    expect(result.skipped).toBe(0);
+    expect(result.spans).toHaveLength(1);
+    expect(result.spans[0]!.name).toBe("http.request");
+    expect(result.spans[0]!.span_kind).toBe("custom");
     expect(result.events[0]!.provider).toBe("openai");
     expect(result.events[0]!.model).toBe("gpt-4o");
     expect(result.events[0]!.input_tokens).toBe(100);

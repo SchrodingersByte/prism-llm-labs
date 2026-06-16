@@ -1,0 +1,31 @@
+DESCRIPTION >
+    Online-eval quality grouped by model (PRD-1): average judge score, pass rate,
+    and score volume per model over the window. Optionally filtered by scorer_type
+    / project. Powers the Quality dashboard "score by model" view.
+
+NODE agg
+SQL >
+    %
+    SELECT
+        model,
+        count()      AS scores,
+        avg(score)   AS avg_score_raw,
+        sum(passed)  AS passed_count
+    FROM eval_score_events
+    WHERE org_id = {{ String(org_id, '') }}
+      AND scored_at >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND scored_at <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      AND ({{ String(scorer_type, '') }} = '' OR scorer_type = {{ String(scorer_type, '') }})
+    GROUP BY model
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    SELECT
+        model,
+        scores,
+        round(avg_score_raw, 4)                  AS avg_score,
+        if(scores > 0, passed_count / scores, 0) AS pass_rate
+    FROM agg
+    ORDER BY scores DESC

@@ -48,4 +48,28 @@ SQL >
   WHERE org_id   = {{ String(org_id, '') }}
     AND trace_id = {{ String(trace_id, '') }}
 
+  UNION ALL
+
+  -- Non-LLM spans (retrieval | tool | chain | custom) retained from OTEL (PRD-6).
+  -- cost_usd is 0 (these spans carry no token cost); tags is an empty map to
+  -- match the llm_events branch's Map(String, String) column.
+  SELECT
+      trace_id,
+      span_id,
+      parent_span_id,
+      start_ts                            AS timestamp,
+      span_kind,
+      service,
+      name                                AS operation,
+      toFloat64(0)                        AS cost_usd,
+      latency_ms,
+      0                                   AS status_int,
+      status                              AS status_str,
+      org_id,
+      project_id,
+      CAST(map() AS Map(String, String))  AS tags
+  FROM spans
+  WHERE org_id   = {{ String(org_id, '') }}
+    AND trace_id = {{ String(trace_id, '') }}
+
   ORDER BY timestamp ASC

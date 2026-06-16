@@ -1,0 +1,18 @@
+SCHEMA >
+    `event_id`    String                 `json:$.event_id`,
+    `org_id`      String                 `json:$.org_id`,
+    `project_id`  String                 `json:$.project_id`,
+    `scorer_type` LowCardinality(String) `json:$.scorer_type`,
+    `model`       LowCardinality(String) `json:$.model`,
+    `judge_model` LowCardinality(String) `json:$.judge_model`,
+    `score`       Float64                `json:$.score`,
+    `passed`      UInt8                  `json:$.passed`,
+    `eval_run_id` String                 `json:$.eval_run_id`,
+    `trace_id`    String                 `json:$.trace_id`,
+    `span_id`     String                 `json:$.span_id`,
+    `scored_at`   DateTime64(3)          `json:$.scored_at`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(scored_at)"
+ENGINE_SORTING_KEY "org_id, scorer_type, model, scored_at"
+ENGINE_TTL "toDateTime(scored_at) + toIntervalDay(365)"

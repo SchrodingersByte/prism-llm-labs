@@ -1,0 +1,49 @@
+DESCRIPTION >
+    Error clustering (PRD-6): groups failing LLM calls (llm_events, status_code
+    >= 400) and failing non-LLM spans (spans, status = 'error') by a coarse error
+    signature, with occurrence counts + last-seen, for the error explorer.
+    Params: org_id (req), from_date, to_date, project_id.
+
+NODE llm_errors
+SQL >
+    %
+    SELECT
+        concat('llm:', provider, ':', model, ' HTTP ', toString(status_code)) AS signature,
+        'llm'           AS source,
+        count()         AS occurrences,
+        max(timestamp)  AS last_seen
+    FROM llm_events
+    WHERE org_id = {{ String(org_id, '') }}
+      AND timestamp >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND timestamp <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      AND status_code >= 400
+    GROUP BY signature, source
+
+NODE span_errors
+SQL >
+    %
+    SELECT
+        concat('span:', span_kind, ':', name) AS signature,
+        'span'          AS source,
+        count()         AS occurrences,
+        max(start_ts)   AS last_seen
+    FROM spans
+    WHERE org_id = {{ String(org_id, '') }}
+      AND start_ts >= {{ DateTime(from_date, '2024-01-01 00:00:00') }}
+      AND start_ts <= {{ DateTime(to_date,   '2099-01-01 00:00:00') }}
+      AND ({{ String(project_id, '') }} = '' OR project_id = {{ String(project_id, '') }})
+      AND status = 'error'
+    GROUP BY signature, source
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    SELECT signature, source, occurrences, last_seen
+    FROM (
+        SELECT signature, source, occurrences, last_seen FROM llm_errors
+        UNION ALL
+        SELECT signature, source, occurrences, last_seen FROM span_errors
+    )
+    ORDER BY occurrences DESC, last_seen DESC
+    LIMIT 100
