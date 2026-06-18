@@ -18,9 +18,9 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: org } = await (admin as any)
     .from("organizations")
-    .select("name, slug, data_residency_policy, gateway_mode")
+    .select("name, slug, data_residency_policy, gateway_mode, pii_detection_enabled, pii_detection_action, pii_masking_enabled, pii_mask_patterns, cache_enabled, cache_mode, cache_ttl_seconds, similarity_threshold")
     .eq("id", member.org_id)
-    .single() as { data: { name: string; slug: string; data_residency_policy: string; gateway_mode: string } | null };
+    .single() as { data: Record<string, unknown> | null };
 
   if (!org) return NextResponse.json({ error: "Org not found" }, { status: 404 });
   return NextResponse.json(org);

@@ -1,1 +1,5 @@
-export default function Page() { return null; }
+import { BillingPanel } from "@/components/billing/BillingPanel";
+
+export default function Page() {
+  return <BillingPanel />;
+}
