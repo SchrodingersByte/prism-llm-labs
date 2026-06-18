@@ -8,6 +8,8 @@ import { ChartCard } from "@/components/patterns/ChartCard";
 import { AreaTrend } from "@/components/charts/AreaTrend";
 import { BarList } from "@/components/charts/BarList";
 import { Sparkline } from "@/components/charts/Sparkline";
+import { Gauge } from "@/components/charts/Gauge";
+import { ScatterPlot } from "@/components/charts/ScatterPlot";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWidgetData } from "@/hooks/useWidgetData";
 import {
@@ -90,8 +92,9 @@ function ErrorRateKpi({ scope, projectId }: WidgetProps) {
 
 function SpendTrend({ scope, projectId }: WidgetProps) {
   const { data, isLoading } = useWidgetData("timeseries", scope, projectId, fetchTimeseriesDaily);
+  const total = (data ?? []).reduce((s, p) => s + p.cost_usd, 0);
   return (
-    <ChartCard title="Spend over time" subtitle="daily · USD">
+    <ChartCard title="Spend over time" subtitle="daily · USD" value={isLoading ? undefined : formatCost(total)}>
       {isLoading ? <Skeleton className="h-[180px] w-full" />
         : !data || data.length === 0 ? <NoData />
         : <AreaTrend data={data as unknown as Record<string, unknown>[]} xKey="date" yKey="cost_usd" height={180}
@@ -276,6 +279,32 @@ function ProviderHealthWidget() {
   );
 }
 
+function CacheHitGauge({ scope, projectId }: WidgetProps) {
+  const { data, isLoading } = useWidgetData("efficiency", scope, projectId, fetchEfficiency);
+  const series = data ?? [];
+  const latest = series[series.length - 1];
+  const rate = latest?.cache_hit_rate ?? 0;
+  return (
+    <ChartCard title="Cache hit rate" subtitle="latest day">
+      {isLoading ? <Skeleton className="h-[150px] w-full" />
+        : series.length === 0 ? <NoData />
+        : <Gauge value={rate} label={`${Math.round(rate * 100)}%`} sublabel={`${fmtNum(latest?.tokens_per_dollar ?? 0)} tokens/$`} />}
+    </ChartCard>
+  );
+}
+
+function TokenScatter({ scope, projectId }: WidgetProps) {
+  const { data, isLoading } = useWidgetData("timeseries", scope, projectId, fetchTimeseriesDaily);
+  const points = (data ?? []).map((p) => ({ requests: p.requests, tokens: p.total_tokens }));
+  return (
+    <ChartCard title="Tokens vs requests" subtitle="daily">
+      {isLoading ? <Skeleton className="h-[180px] w-full" />
+        : points.length === 0 ? <NoData />
+        : <ScatterPlot data={points} xKey="requests" yKey="tokens" height={180} xFormatter={fmtNum} yFormatter={fmtNum} />}
+    </ChartCard>
+  );
+}
+
 // ── Registry ──
 
 export const REGISTRY: WidgetDef[] = [
@@ -294,6 +323,8 @@ export const REGISTRY: WidgetDef[] = [
   { id: "cost-by-feature",  title: "Cost by feature",  category: "spend", size: "md", roles: ["owner", "administrator"], Component: CostByFeature },
   { id: "budget-tracker",   title: "Budget tracker",   category: "spend", size: "md", roles: ["owner", "administrator"], Component: BudgetTracker },
   { id: "provider-health",  title: "Provider health",  category: "efficiency", size: "md", roles: ["owner", "administrator"], Component: ProviderHealthWidget },
+  { id: "cache-gauge",      title: "Cache hit rate",   description: "Cache-hit dial", category: "efficiency", size: "md", Component: CacheHitGauge },
+  { id: "token-scatter",    title: "Tokens vs requests", description: "Token/requests scatter", category: "efficiency", size: "md", Component: TokenScatter },
 ];
 
 const BY_ID = new Map(REGISTRY.map((w) => [w.id, w]));
@@ -303,7 +334,7 @@ export function getWidget(id: string): WidgetDef | undefined {
 
 export const DEFAULT_ORG_VIEW = [
   "kpi-spend", "kpi-requests", "kpi-tokens", "kpi-errors",
-  "spend-trend", "top-models", "projects",
+  "spend-trend", "top-models", "cache-gauge", "projects",
 ];
 export const DEFAULT_PROJECT_VIEW = [
   "kpi-spend", "kpi-requests", "kpi-tokens", "kpi-errors",

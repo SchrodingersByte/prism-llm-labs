@@ -40,27 +40,31 @@ export function KpiCard({
   chart?: React.ReactNode; // optional sparkline slot (caller supplies a client chart)
   className?: string;
 }) {
+  const chipStyle: React.CSSProperties | undefined =
+    delta?.tone === "positive" ? { background: "hsl(var(--positive) / 0.12)", color: "hsl(var(--positive-text))" }
+    : delta?.tone === "negative" ? { background: "hsl(var(--signal) / 0.12)", color: "hsl(var(--signal-text))" }
+    : undefined;
+
   return (
     <div className={cn("dash-card relative overflow-hidden p-4", RULE[color], className)}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground/60" />}
+        {Icon && (
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/70 text-muted-foreground">
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
       </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <span className="tabular text-2xl font-medium tracking-tight">{value}</span>
-        {chart && <div className="h-8 w-20 shrink-0">{chart}</div>}
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="tabular text-2xl font-semibold tracking-tight">{value}</span>
+        {delta && (
+          <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium", !chipStyle && "bg-muted text-muted-foreground")} style={chipStyle}>
+            {delta.direction === "up" ? <ArrowUpRight className="h-3 w-3" /> : delta.direction === "down" ? <ArrowDownRight className="h-3 w-3" /> : null}
+            {delta.value}
+          </span>
+        )}
       </div>
-      {delta && (
-        <div
-          className={cn(
-            "mt-1 flex items-center gap-1 text-xs",
-            delta.tone === "positive" ? "positive" : delta.tone === "negative" ? "signal" : "text-muted-foreground",
-          )}
-        >
-          {delta.direction === "up" ? <ArrowUpRight className="h-3.5 w-3.5" /> : delta.direction === "down" ? <ArrowDownRight className="h-3.5 w-3.5" /> : null}
-          <span>{delta.value}</span>
-        </div>
-      )}
+      {chart && <div className="mt-3 h-10 w-full">{chart}</div>}
     </div>
   );
 }
