@@ -1,15 +1,20 @@
 import { ArrowUpRight, ArrowDownRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type GlowColor = "indigo" | "cyan" | "violet" | "emerald" | "amber" | "rose";
+export type GlowColor =
+  | "gold" | "coral" | "emerald" | "sky" | "violet" | "amber"
+  | "indigo" | "cyan" | "rose"; // back-compat aliases
 
-const GLOW: Record<GlowColor, string> = {
-  indigo:  "card-glow-indigo",
-  cyan:    "card-glow-cyan",
-  violet:  "card-glow-violet",
-  emerald: "card-glow-emerald",
-  amber:   "card-glow-amber",
-  rose:    "card-glow-rose",
+const RULE: Record<GlowColor, string> = {
+  gold:    "card-rule-gold",
+  amber:   "card-rule-gold",
+  indigo:  "card-rule-gold",    // ← legacy alias
+  coral:   "card-rule-coral",
+  rose:    "card-rule-coral",   // ← legacy alias
+  emerald: "card-rule-emerald",
+  sky:     "card-rule-sky",
+  cyan:    "card-rule-sky",     // ← legacy alias
+  violet:  "card-rule-violet",
 };
 
 export interface KpiDelta {
@@ -23,7 +28,7 @@ export function KpiCard({
   value,
   delta,
   icon: Icon,
-  color = "indigo",
+  color = "gold",
   chart,
   className,
 }: {
@@ -36,7 +41,7 @@ export function KpiCard({
   className?: string;
 }) {
   return (
-    <div className={cn("dash-card relative overflow-hidden p-4", GLOW[color], className)}>
+    <div className={cn("dash-card relative overflow-hidden p-4", RULE[color], className)}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {Icon && <Icon className="h-4 w-4 text-muted-foreground/60" />}
@@ -49,7 +54,7 @@ export function KpiCard({
         <div
           className={cn(
             "mt-1 flex items-center gap-1 text-xs",
-            delta.tone === "positive" ? "text-emerald-500" : delta.tone === "negative" ? "text-rose-500" : "text-muted-foreground",
+            delta.tone === "positive" ? "positive" : delta.tone === "negative" ? "signal" : "text-muted-foreground",
           )}
         >
           {delta.direction === "up" ? <ArrowUpRight className="h-3.5 w-3.5" /> : delta.direction === "down" ? <ArrowDownRight className="h-3.5 w-3.5" /> : null}

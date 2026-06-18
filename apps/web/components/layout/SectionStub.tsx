@@ -9,16 +9,19 @@ export function SectionStub({
   icon,
   note,
   phase,
+  hideHeader,
 }: {
   title: string;
   description?: string;
   icon?: LucideIcon;
   note?: string;
   phase?: string;
+  /** Omit the PageHeader — for tabbed sections where the layout already renders it. */
+  hideHeader?: boolean;
 }) {
   return (
     <div>
-      <PageHeader title={title} description={description} />
+      {!hideHeader && <PageHeader title={title} description={description} />}
       <div className="p-5">
         <EmptyState
           icon={icon}

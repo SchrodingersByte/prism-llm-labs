@@ -5,6 +5,8 @@ import { z } from "zod";
 const Schema = z.object({
   org_name: z.string().min(1).max(100),
   user_id:  z.string().uuid(),
+  type:     z.enum(["personal", "team", "business", "education"]).optional(),
+  region:   z.enum(["US", "IN"]).optional(),
 });
 
 /**
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
   const parsed = Schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid" }, { status: 400 });
 
-  const { org_name, user_id } = parsed.data;
+  const { org_name, user_id, type, region } = parsed.data;
 
   // Prevent creating an org on behalf of another user
   if (user_id !== user.id) {
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: org } = await (admin as any)
-    .from("organizations").insert({ name: org_name, slug }).select("id").single() as { data: { id: string } | null };
+    .from("organizations").insert({ name: org_name, slug, type: type ?? "personal", billing_region: region ?? "US" }).select("id").single() as { data: { id: string } | null };
 
   if (!org) return NextResponse.json({ error: "Failed to create org" }, { status: 500 });
 

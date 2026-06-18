@@ -4,158 +4,151 @@
 
 @layer base {
   :root {
-    /* ── shadcn base tokens ─────────────────────────────────────────────── */
-    --background:             0 0% 100%;
-    --foreground:             222 47% 11%;
-    --card:                   210 40% 98%;
-    --card-foreground:        222 47% 11%;
+    /* ── shadcn semantic tokens — Gold · Coral · Emerald, light ─────────────
+       Neutral gray surfaces + gold brand, mirroring the dark scheme. Gold is
+       deepened to #EAB308 (vs #FACC15 in dark) so thin strokes/active text stay
+       legible on white; gold fills keep dark ink (--primary-foreground). */
+    --background:             0 0% 98%;      /* #FAFAFA */
+    --foreground:             0 0% 10%;      /* #1A1A1A */
+    --card:                   0 0% 100%;     /* #FFFFFF */
+    --card-foreground:        0 0% 10%;
     --popover:                0 0% 100%;
-    --popover-foreground:     222 47% 11%;
-    --primary:                239 84% 67%;
-    --primary-foreground:     0 0% 100%;
-    --secondary:              214 32% 91%;
-    --secondary-foreground:   222 47% 20%;
-    --muted:                  210 40% 96%;
-    --muted-foreground:       215 16% 47%;
-    --accent:                 258 90% 66%;
-    --accent-foreground:      0 0% 100%;
-    --destructive:            0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border:                 214 32% 91%;
-    --input:                  214 32% 91%;
-    --ring:                   239 84% 67%;
+    --popover-foreground:     0 0% 10%;
+    --primary:                45 93% 47%;    /* gold #EAB308 */
+    --primary-foreground:     0 0% 10%;      /* dark ink on gold */
+    --secondary:              0 0% 95%;
+    --secondary-foreground:   0 0% 16%;
+    --muted:                  0 0% 96%;
+    --muted-foreground:       0 0% 44%;      /* #707070 */
+    --accent:                 0 0% 94%;      /* neutral hover */
+    --accent-foreground:      0 0% 16%;
+    --destructive:            0 84% 60%;     /* coral #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+    --signal:                 0 84% 60%;     /* coral signal */
+    --signal-foreground:      0 0% 100%;
+    --positive:               160 84% 33%;   /* emerald #059669 */
+    --positive-foreground:    0 0% 100%;
+    /* Darkened colored-TEXT variants — AA-legible on white, decoupled from fills/rules */
+    --signal-text:            0 72% 42%;
+    --positive-text:          160 84% 26%;
+    --primary-text:           38 92% 30%;
+    --border:                 0 0% 90%;      /* #E5E5E5 */
+    --input:                  0 0% 90%;
+    --ring:                   45 93% 47%;
     --radius:                 0.5rem;
 
-    /* ── Brand design tokens ────────────────────────────────────────────── */
-
-    /* Page gradient — cool blue-grey, extracted from reference */
-    --page-from:    #dde6f5;   /* top-left  */
-    --page-mid:     #edf2fb;   /* midpoint  */
-    --page-to:      #f6f9fe;   /* bottom    */
-
-    /* Ink scale */
-    --ink-900:      #0f1117;   /* headings, CTA background        */
-    --ink-700:      #374151;   /* nav links, secondary text       */
-    --ink-500:      #6b7280;   /* body copy, placeholders         */
-    --ink-300:      #9ca3af;   /* eyebrow labels, hints           */
-    --ink-100:      #e5e7eb;   /* borders, dividers               */
-
-    /* CTA button */
+    /* ── Marketing brand tokens (unchanged — used by public pages) ──────── */
+    --page-from:    #dde6f5;
+    --page-mid:     #edf2fb;
+    --page-to:      #f6f9fe;
+    --ink-900:      #0f1117;
+    --ink-700:      #374151;
+    --ink-500:      #6b7280;
+    --ink-300:      #9ca3af;
+    --ink-100:      #e5e7eb;
     --btn-primary-bg:     #0f1117;
     --btn-primary-fg:     #ffffff;
     --btn-primary-hover:  #1e2330;
-
-    /* Nav */
     --nav-bg:         rgba(255, 255, 255, 0.80);
     --nav-border:     rgba(15, 17, 23, 0.07);
     --nav-blur:       12px;
 
-    /* Typography */
+    /* ── Typography — editorial ledger ─────────────────────────────────── */
     --font-sans:  "Inter", system-ui, -apple-system, sans-serif;
+    --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+    --font-mono:  ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   }
 
-  /* Supabase-style neutral near-black surfaces; indigo kept as the primary accent. */
   .dark {
-    --background:             0 0% 7%;    /* #121212 — app frame */
-    --foreground:             0 0% 93%;
-    --card:                   0 0% 11%;   /* #1c1c1c — raised panels */
+    /* ── Gold · Coral · Emerald, dark — neutral near-black surfaces ───────── */
+    --background:             0 0% 9%;       /* #171717 */
+    --foreground:             0 0% 93%;      /* #EDEDED */
+    --card:                   0 0% 12%;      /* #1F1F1F */
     --card-foreground:        0 0% 95%;
-    --popover:                0 0% 13%;   /* #212121 */
+    --popover:                0 0% 12%;
     --popover-foreground:     0 0% 95%;
-    --primary:                239 84% 67%;
-    --primary-foreground:     0 0% 100%;
+    --primary:                48 96% 53%;    /* gold #FACC15 */
+    --primary-foreground:     0 0% 10%;      /* dark ink on gold */
     --secondary:              0 0% 16%;
-    --secondary-foreground:   0 0% 80%;
+    --secondary-foreground:   0 0% 85%;
     --muted:                  0 0% 15%;
-    --muted-foreground:       0 0% 56%;
-    --accent:                 258 90% 66%;
-    --accent-foreground:      0 0% 100%;
-    --destructive:            0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border:                 0 0% 17%;   /* ~#2c2c2c hairlines */
-    --input:                  0 0% 18%;
-    --ring:                   239 84% 67%;
+    --muted-foreground:       0 0% 61%;      /* #9B9B9B */
+    --accent:                 0 0% 15%;      /* neutral hover */
+    --accent-foreground:      0 0% 90%;
+    --destructive:            0 95% 71%;     /* coral #FB6F6F */
+    --destructive-foreground: 0 0% 10%;
+    --signal:                 0 95% 71%;     /* coral signal #FB6F6F */
+    --signal-foreground:      0 0% 10%;
+    --positive:               160 84% 51%;   /* emerald #34D399 */
+    --positive-foreground:    0 0% 10%;
+    /* On near-black the bright fills already read as text — text == fill here */
+    --signal-text:            0 95% 71%;
+    --positive-text:          160 84% 51%;
+    --primary-text:           48 96% 53%;
+    --border:                 0 0% 19%;      /* #303030 */
+    --input:                  0 0% 22%;
+    --ring:                   48 96% 53%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply text-foreground;
-    font-family: var(--font-sans);
-  }
+  * { @apply border-border; }
+  body { @apply text-foreground; font-family: var(--font-sans); }
 }
 
-/* ── Marketing page background ───────────────────────────────────────────── */
+/* ── Marketing page utilities (unchanged) ────────────────────────────────── */
 .page-gradient {
-  background: linear-gradient(
-    160deg,
-    var(--page-from)  0%,
-    var(--page-mid)  50%,
-    var(--page-to)   100%
-  );
+  background: linear-gradient(160deg, var(--page-from) 0%, var(--page-mid) 50%, var(--page-to) 100%);
 }
-
-/* ── Reusable brand utilities (safe in Server Components — pure CSS) ─────── */
-.nav-link {
-  color: var(--ink-700);
-  transition: color 0.15s ease;
-}
+.nav-link { color: var(--ink-700); transition: color 0.15s ease; }
 .nav-link:hover { color: var(--ink-900); }
-
-.nav-link-muted {
-  color: var(--ink-500);
-  transition: color 0.15s ease;
-}
+.nav-link-muted { color: var(--ink-500); transition: color 0.15s ease; }
 .nav-link-muted:hover { color: var(--ink-700); }
-
-.btn-primary {
-  background: var(--btn-primary-bg);
-  color:      var(--btn-primary-fg);
-  transition: background 0.15s ease;
-}
-.btn-primary:hover    { background: var(--btn-primary-hover); }
+.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); transition: background 0.15s ease; }
+.btn-primary:hover { background: var(--btn-primary-hover); }
 .btn-primary:disabled { opacity: 0.6; }
-
-.btn-outline {
-  background: white;
-  color:      var(--ink-700);
-  border:     1px solid var(--ink-100);
-  transition: background 0.15s ease, color 0.15s ease;
-}
+.btn-outline { background: white; color: var(--ink-700); border: 1px solid var(--ink-100); transition: background 0.15s ease, color 0.15s ease; }
 .btn-outline:hover { background: var(--page-to); color: var(--ink-900); }
-
-.input-brand {
-  background:   white;
-  color:        var(--ink-900);
-  border:       1px solid var(--ink-100);
-  transition:   border-color 0.15s ease;
-  outline:      none;
-}
+.input-brand { background: white; color: var(--ink-900); border: 1px solid var(--ink-100); transition: border-color 0.15s ease; outline: none; }
 .input-brand::placeholder { color: var(--ink-300); }
-.input-brand:focus        { border-color: var(--ink-700); }
+.input-brand:focus { border-color: var(--ink-700); }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   DASHBOARD DESIGN SYSTEM — dark-first, dense "data terminal"
-   Used by the rebuilt app shell + widget engine. Marketing utilities above
-   are unaffected. All surfaces lean on the shadcn semantic tokens so light
-   and dark both stay correct; the data-viz palette below feeds Recharts.
+   DASHBOARD DESIGN SYSTEM — Teal + Coral, editorial ledger
    ══════════════════════════════════════════════════════════════════════════ */
 @layer base {
   :root {
-    /* Categorical data-viz palette (charts, accents, sparklines) */
-    --viz-indigo:  #6366f1;
+    /* Categorical data-viz palette — gold-led, coral as the signal.
+       Light uses mid-tones that read on white; dark brightens them (below).
+       Series order: gold · sky · violet · emerald · coral. */
+    --viz-gold:    #eab308;
+    --viz-sky:     #0ea5e9;
     --viz-violet:  #8b5cf6;
-    --viz-cyan:    #06b6d4;
-    --viz-emerald: #10b981;
-    --viz-amber:   #f59e0b;
-    --viz-rose:    #f43f5e;
+    --viz-emerald: #059669;
+    --viz-coral:   #ef4444;
     --viz-blue:    #3b82f6;
+    --viz-amber:   #eab308;
     --viz-slate:   #64748b;
-    /* Dashboard chrome (kept subtle; auto-themed surfaces come from shadcn) */
+    /* Back-compat aliases (old slot names → new palette) */
+    --viz-teal:    #eab308;
+    --viz-indigo:  #eab308;
+    --viz-cyan:    #0ea5e9;
+    --viz-rose:    #ef4444;
     --dash-grid-line: rgba(148, 163, 184, 0.14);
+  }
+  .dark {
+    --viz-gold:    #facc15;
+    --viz-sky:     #38bdf8;
+    --viz-violet:  #a78bfa;
+    --viz-emerald: #34d399;
+    --viz-coral:   #fb6f6f;
+    --viz-blue:    #38bdf8;
+    --viz-amber:   #facc15;
+    --viz-slate:   #94a3b8;
+    --viz-teal:    #facc15;
+    --viz-indigo:  #facc15;
+    --viz-cyan:    #38bdf8;
+    --viz-rose:    #fb6f6f;
   }
 }
 
@@ -163,18 +156,38 @@
   /* Compact card surface — the base for every dashboard panel */
   .dash-card { @apply rounded-lg border border-border bg-card text-card-foreground; }
 
-  /* KPI accent: colored top hairline + faint top-down glow. Pair with .dash-card. */
-  .card-glow-indigo  { border-top: 2px solid var(--viz-indigo);  background-image: linear-gradient(180deg, rgb(99 102 241 / 0.07), transparent 42%); }
-  .card-glow-cyan    { border-top: 2px solid var(--viz-cyan);    background-image: linear-gradient(180deg, rgb(6 182 212 / 0.07), transparent 42%); }
-  .card-glow-violet  { border-top: 2px solid var(--viz-violet);  background-image: linear-gradient(180deg, rgb(139 92 246 / 0.07), transparent 42%); }
-  .card-glow-emerald { border-top: 2px solid var(--viz-emerald); background-image: linear-gradient(180deg, rgb(16 185 129 / 0.07), transparent 42%); }
-  .card-glow-amber   { border-top: 2px solid var(--viz-amber);   background-image: linear-gradient(180deg, rgb(245 158 11 / 0.07), transparent 42%); }
-  .card-glow-rose    { border-top: 2px solid var(--viz-rose);    background-image: linear-gradient(180deg, rgb(244 63 94 / 0.07), transparent 42%); }
+  /* Signature: single colored rule on a card (replaces card-glow). */
+  .card-rule         { border-top: 2px solid hsl(var(--primary)); }
+  .card-rule-signal  { border-top: 2px solid hsl(var(--signal)); }
+  /* Semantic top-rules for KPI / status cards (gold·coral·emerald·sky·violet). */
+  .card-rule-gold    { border-top: 2px solid hsl(var(--primary)); }
+  .card-rule-coral   { border-top: 2px solid hsl(var(--signal)); }
+  .card-rule-emerald { border-top: 2px solid hsl(var(--positive)); }
+  .card-rule-sky     { border-top: 2px solid var(--viz-sky); }
+  .card-rule-violet  { border-top: 2px solid var(--viz-violet); }
+
+  /* Coral signal + emerald positive surfaces (badges, status chips, deltas).
+     Text utilities use the AA-tuned *-text tokens; chips keep the saturated fill. */
+  .signal        { color: hsl(var(--signal-text)); }
+  .signal-chip   { background: hsl(var(--signal)); color: hsl(var(--signal-foreground)); }
+  .positive      { color: hsl(var(--positive-text)); }
+  .positive-chip { background: hsl(var(--positive)); color: hsl(var(--positive-foreground)); }
+  .brand-text    { color: hsl(var(--primary-text)); }
+
+  /* DEPRECATED — kept so not-yet-rebuilt pages don't break. Use .card-rule. */
+  .card-glow-indigo,
+  .card-glow-cyan,
+  .card-glow-violet,
+  .card-glow-emerald,
+  .card-glow-amber,
+  .card-glow-rose { border-top: 2px solid hsl(var(--primary)); }
 }
 
 @layer utilities {
   /* Tabular figures for metrics so digits don't jitter as values update */
   .tabular { font-variant-numeric: tabular-nums; }
+  .font-numeric { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .font-display { font-family: var(--font-serif); }
 
   /* Thin dashboard scrollbars */
   .dash-scroll { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }

@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createServerClient, createAdminClient, getMemberOrg } from "@/lib/supabase/server";
 import { ProjectProvider } from "@/components/layout/project-context";
-import { SecondaryNav } from "@/components/layout/SecondaryNav";
 
 export default async function ProjectLayout({
   children,
@@ -48,10 +47,7 @@ export default async function ProjectLayout({
 
   return (
     <ProjectProvider project={info}>
-      <div className="flex min-h-full">
-        <SecondaryNav />
-        <div className="min-w-0 flex-1">{children}</div>
-      </div>
+      <div className="min-w-0 flex-1">{children}</div>
     </ProjectProvider>
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, type AuthContext } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/server";
-import { randomBytes, createHash } from "crypto";
+import { generatePrismKey } from "@/lib/keys/generate";
 import { writeAuditLog } from "@/lib/audit/log";
 import { z } from "zod";
 
@@ -161,11 +161,7 @@ export async function POST(req: NextRequest) {
     provider_key_id = allProviderKeyIds[0];
   }
 
-  const orgPrefix  = ctx.orgId.replace(/-/g, "").slice(0, 4);
-  const envTag     = parsed.data.environment === "production" ? "live" : "test";
-  const rawKey     = `prism_${envTag}_${orgPrefix}_${randomBytes(24).toString("hex")}`;
-  const keyHash    = createHash("sha256").update(rawKey).digest("hex");
-  const keyPrefix  = rawKey.slice(0, 12);
+  const { rawKey, keyHash, keyPrefix } = generatePrismKey(parsed.data.environment, ctx.orgId);
 
   // api_keys is slimmed — spend caps live in key_caps, provider linking in
   // key_provider_links; user_id/assigned_user_id/description/renewal/buffer dropped.

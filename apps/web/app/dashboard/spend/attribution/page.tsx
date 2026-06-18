@@ -1,1 +1,5 @@
-export default function Page() { return null; }
+import { Attribution } from "@/components/spend/Attribution";
+
+export default function AttributionPage() {
+  return <Attribution />;
+}

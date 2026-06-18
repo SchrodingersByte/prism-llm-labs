@@ -48,6 +48,31 @@ export async function createCheckoutSession(params: {
   return session.url!;
 }
 
+/**
+ * Checkout session for an organization that does NOT exist yet — the org intent
+ * rides in metadata so the webhook can create it on payment success. No trial:
+ * the card is charged before the org is provisioned.
+ */
+export async function createCheckoutSessionForNewOrg(params: {
+  metadata:   Record<string, string>;
+  plan:       string;
+  email:      string;
+  successUrl: string;
+  cancelUrl:  string;
+}): Promise<string> {
+  const { metadata, plan, email, successUrl, cancelUrl } = params;
+  const session = await getStripe().checkout.sessions.create({
+    mode:              "subscription",
+    customer_email:    email,
+    line_items:        [{ price: getPriceIds()[plan], quantity: 1 }],
+    subscription_data: { metadata },
+    success_url:       `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url:        cancelUrl,
+    metadata,
+  });
+  return session.url!;
+}
+
 export async function cancelSubscription(stripeSubscriptionId: string): Promise<void> {
   // Cancel at period end so access continues until billing cycle ends
   await getStripe().subscriptions.update(stripeSubscriptionId, {

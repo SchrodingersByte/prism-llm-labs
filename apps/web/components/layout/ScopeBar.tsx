@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { FolderKanban, Clock, Server } from "lucide-react";
 import {
@@ -22,8 +22,9 @@ const ENV_LABELS: Record<EnvKey, string> = {
  * selectors are hidden (project comes from the route, env from the EnvSwitcher);
  * the range selector always shows.
  */
-export function ScopeBar() {
+export function ScopeBar({ canManage }: { canManage?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const inProject = !!parseProjectPath(pathname);
   const { scope, setScope } = useScope();
 
@@ -37,7 +38,13 @@ export function ScopeBar() {
   return (
     <div className="flex items-center gap-2">
       {!inProject && (
-        <Select value={scope.project} onValueChange={(v) => setScope({ project: v })}>
+        <Select
+          value={scope.project}
+          onValueChange={(v) => {
+            if (v === "__new__") { router.push("/dashboard/projects"); return; }
+            setScope({ project: v });
+          }}
+        >
           <SelectTrigger className="h-8 w-[150px] text-xs">
             <FolderKanban className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <SelectValue />
@@ -47,6 +54,9 @@ export function ScopeBar() {
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
+            {canManage && (
+              <SelectItem value="__new__" className="text-primary">+ New project</SelectItem>
+            )}
           </SelectContent>
         </Select>
       )}

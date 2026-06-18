@@ -90,7 +90,7 @@ async function ensureUserOrg(user: User): Promise<{ isNew: boolean }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: inserted } = await (admin as any)
     .from("organizations")
-    .insert({ name: emailBase, slug, onboarding_step: 0 })
+    .insert({ name: emailBase, slug, plan: "free", onboarding_step: 0 })
     .select("id")
     .single();
 

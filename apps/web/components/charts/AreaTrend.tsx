@@ -12,7 +12,7 @@ interface AreaTrendProps {
   valueFormatter?: (v: number) => string;
 }
 
-export function AreaTrend({ data, xKey, yKey, color = VIZ.indigo, height = 200, valueFormatter }: AreaTrendProps) {
+export function AreaTrend({ data, xKey, yKey, color = VIZ.gold, height = 200, valueFormatter }: AreaTrendProps) {
   const gradientId = `area-grad-${yKey}`;
   return (
     <ResponsiveContainer width="100%" height={height}>

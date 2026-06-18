@@ -49,13 +49,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
     : rawRole === "read_only"                            ? "read_only"
     : "developer";
 
+  const userName =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    undefined;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <Sidebar role={role} />
+      <Sidebar role={role} userEmail={user.email ?? ""} userName={userName} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar orgs={orgs} activeOrgId={member.org_id} userEmail={user.email ?? ""} role={role} />
         <main className="flex-1 overflow-y-auto dash-scroll">
-          <RoleProvider role={role}>{children}</RoleProvider>
+          {/* Centered content column so the app doesn't stretch edge-to-edge on ultrawide displays. */}
+          <div className="mx-auto w-full max-w-[1600px]">
+            <RoleProvider role={role}>{children}</RoleProvider>
+          </div>
         </main>
       </div>
     </div>

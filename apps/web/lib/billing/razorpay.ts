@@ -58,6 +58,33 @@ export async function createRazorpaySubscription(params: {
   };
 }
 
+/**
+ * Subscription for an organization that does NOT exist yet — the org intent
+ * rides in `notes` so the webhook/verify can create it on payment success.
+ */
+export async function createSubscriptionForNewOrg(params: {
+  plan:  string;
+  notes: Record<string, string>;
+}): Promise<{ subscriptionId: string; shortUrl: string | null; keyId: string }> {
+  const planId = planIds()[params.plan];
+  if (!planId) throw new Error(`No Razorpay plan configured for "${params.plan}"`);
+
+  const sub = await getRzp().subscriptions.create({
+    plan_id:         planId,
+    total_count:     120,
+    customer_notify: 1,
+    notes:           params.notes,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any);
+
+  return {
+    subscriptionId: sub.id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    shortUrl:       (sub as any).short_url ?? null,
+    keyId:          process.env.RAZORPAY_KEY_ID!,
+  };
+}
+
 /** Verify the Checkout callback signature: HMAC_SHA256(payment_id|subscription_id). */
 export function verifySubscriptionPayment(p: {
   razorpayPaymentId:      string;

@@ -2,6 +2,7 @@
 
 > **Status:** Source of truth for all frontend work. **Supersedes `docs/frontend/pending-ui.md`** (now deprecated).
 > **Created:** 2026-06-16 · **Mode:** greenfield — the frontend is (re)built from scratch except sign-in + onboarding.
+> **IA & RBAC locked:** 2026-06-16 — two-tier org/project shell · Command Center landing + activation fork · hybrid-mirrored analytics · self-serve dashboard customization · no per-domain gating · RBAC matrix. **See §1A** (supersedes the flat nav line in §2).
 > **Scope:** the entire repo surface — public/marketing, auth, the authenticated app (analytics, quality & intelligence,
 > observability, operations, settings/configuration, account/enterprise), internal admin, and project-scoped views.
 
@@ -47,6 +48,62 @@ These gate all area work and are built once, then reused.
 
 ---
 
+## 1A. Resolved IA, landing & RBAC (locked 2026-06-16)
+Decisions from the IA design pass. These **supersede §2's "Final nav groups"** line; §2's duplicate-route table still applies.
+
+### Shell — two-tier (org ⇄ project)
+The app is a **two-tier** shell (already built): an **org tier**, and a **project tier** when you open a project. Topbar carries Org · Project · Scope · Env switchers (built). Sidebar swaps `ORG_NAV` ⇄ `PROJECT_NAV` (`lib/nav.ts`, `components/layout/Sidebar.tsx`).
+
+**Org nav (grown — current nav is thin; groups need building):**
+- **ANALYTICS** — Overview · FinOps · Models · Unit Economics · Spend
+- **QUALITY & INTELLIGENCE** — Quality · Prompts · Workbench (Evals/Arena) · Drift · Copilot
+- **OBSERVABILITY** — Sessions · Logs · Agents · Errors
+- **OPERATIONS** — Projects · Alerts · Training · Customers (P&L) · Shadow IT
+- **SETTINGS** — Access · Integrations · Billing · Compliance · Privacy
+- **ACCOUNT** (enterprise) — Organization · Members · SSO
+
+**Project nav (built):** Overview · Observability (Logs/Sessions/Traces/Agents) · Spend · API Keys (Keys/Caps/Requests) · Enforcement · Governance · Settings.
+
+### Analytics placement — hybrid mirrored
+Heavy analytics live at **org tier (primary, aggregate, filterable)** AND are **mirrored project-scoped** under `/dashboard/projects/[id]/*` via `project_id`/`project_ids` pipe params. Org-only (no mirror): Teams · Billing · Org settings · SSO · Integrations · Customers/P&L · Copilot · Shadow IT · Compliance · My keys. Project-only home: project API Keys · Enforcement · Governance · project Settings.
+
+### Landing — org "Command Center" at `/dashboard`
+Three zones: **Triage** (anomalies · budgets · firing alerts · error rate) → **Spend** (KPIs + Δ · spend trend · by model/provider) → **Launchpad** (project cards w/ mini-KPIs → drill into project tier). The project-tier Overview mirrors the same frame, scoped.
+- **New-org fork:** `/dashboard` checks "first event received?" → if none, render an **activation checklist** (add provider key · install SDK · send first event), not a wall of zeros.
+
+### Personalization — self-serve, not enforced personas
+Each user **customizes their own** overview via a **widget palette rail** (add/remove/reorder metrics), persisted per-user (add a layout column to `user_preferences`). **Optional starter templates** (Finance/Product/Eng/Sales/DS/Exec) seed a layout, then the user tweaks. No admin-assigned lenses. **Persona is a preference, never a security boundary.** Reuses `DashboardCanvas` + `components/widgets/registry` (expand 7 → ~25 widgets as pipes/stages land). The canvas must enforce each widget's `roles?` (the one gate kept).
+
+### Access control — RBAC stays as-is (no domain gating)
+**Decision: no per-domain data restrictions** (e.g. hiding revenue from Eng). Visibility = the existing primitives in `lib/supabase/auth.ts`: `canSee` (nav `roles`), `canManage` (owner||admin), `canWrite` (owner||admin||developer), `isOwner` (billing/ownership). Sensitive domains (revenue, payloads) are **open to all roles in scope**.
+
+**Feature → role** — *Manage = view+edit · View = read · View+ = edit only in granted projects · — = hidden:*
+
+| Area | Owner | Admin | Developer |
+|---|---|---|---|
+| Read analytics & observability (Overview, FinOps, Models, Unit Econ, Quality, Drift, Sessions, Logs, Agents, Errors, Customers) | View | View | View |
+| Dev-loop content (Prompts, Evals/Workbench, Annotations, Feedback, Playground) | Manage | Manage | View+ |
+| Org resources (keys, provider keys, routing, governance, guardrails, budgets, cost centers, alerts, content-capture, integrations, cloud-billing, projects, training sync, shadow-IT, revenue connectors) | Manage | Manage | — |
+| Team / Members / Invites | Manage | Manage¹ | — |
+| Compliance / Audit (read-only record) | View | View | — |
+| Billing / Plan / Seats | Manage | View | — |
+| Ownership transfer · Org delete · SSO | Owner-only | — | — |
+
+¹ admin can invite admin/developer/read_only but cannot grant/transfer the **owner** role. **read_only** = developer's visibility, zero writes. **Project-scoped member** (`member_project_roles`, no org role) sees only granted projects and fails org `roles` gates.
+
+**Sidebars:** Owner and Admin are **nav-identical** (differences are in-page: Billing view-only for admin, no ownership/SSO). **Developer** sees Analytics + Quality&Intel + Observability + Operations(minus Shadow IT); **hides** Settings/Account/Teams/Integrations/Billing; project tier hides Enforcement/Governance/Settings.
+
+---
+
+## 1B. Enhancement decisions (ENH-01/02/03 — locked 2026-06-16)
+From [docs/enhancements/frontend-architecture-enhancements.md](../enhancements/frontend-architecture-enhancements.md). Backend is already in place except where noted; these are frontend/design directives.
+
+- **ENH-01 — Unified Prism API key (one key, two modes).** Key creation is a **single wizard** (no analytics-vs-gateway radio). A key's mode is a **derived badge** — *Gateway* if it has `key_provider_links`, else *Analytics*. The "link provider key(s)" step is **admin-only** and is what flips a key to gateway mode (unlocking per-key caps, routing, governance). Key list/detail show the derived badge + linked provider keys + caps. Optional: surface the org `gateway_mode` (`sdk_optional`/`gateway_required`) toggle in org settings. → §4.9 API Keys.
+- **ENH-02 — GitHub / SCM connections: UNCHANGED (org-admin managed).** Connections (`github_connections`/`scm_connections`) stay **org-level, org-admin-only** (RLS `is_org_admin`); repo→project binding (`project_github_repos`) is managed in project Settings (org-admin). **No RLS relaxation, no project-scoped tokens** — kept exactly as previously built. → §4.9 Integrations + §4.11 project Settings.
+- **ENH-03 — Observability-only mode + capability gating.** Observability-only = `gateway_mode='sdk_optional'` + analytics keys (no provider linking): the SDK-wrapper / OTEL path. **Analytics + quality pages must render** in this mode (design empty/first-run states). **Control-plane pages** (provider keys, routing, governance *enforcement*, guardrail block/redact, soft-caps, caching) show a **"requires gateway mode" gate** when no gateway/provider keys are configured. Onboarding offers an explicit **observability-only vs full-gateway fork** (observability path = analytics key + SDK, skip provider keys). Optional **capability matrix** (observability vs gateway). → §4.1 onboarding fork, §4.9 control-plane gates, §1 empty-states.
+
+---
+
 ## 2. Canonical information architecture (resolve duplicate routes by design)
 The raw tree contains overlapping routes. Build the canonical one and redirect the rest:
 
@@ -60,7 +117,7 @@ The raw tree contains overlapping routes. Build the canonical one and redirect t
 | Integrations | `dashboard/settings/integrations` | `dashboard/integrations` |
 | Control plane | fold `dashboard/control/{keys,router,alerts,engine}` + `dashboard/govern` into Settings (`api-keys`, `routing`, `alerts`, `model-governance`) + `dashboard/engine` | `dashboard/control/*`, `dashboard/govern` |
 
-**Final nav groups:** Public (marketing) · Auth · **Analytics · Quality & Intelligence · Observability · Operations · Settings · Account (enterprise) · Admin (internal)**.
+**Final nav groups:** resolved in **§1A** (two-tier org/project shell — org nav groups + project nav). Public (marketing) and Admin (internal) sit outside the authed shell.
 
 ---
 
@@ -83,7 +140,7 @@ Each table: **Screen/Route · Feature scope (functional) · Backing data · Pri 
 | Screen | Feature scope | Backing | Pri | Stage |
 |---|---|---|---|---|
 | `/login` (retained) | email + OAuth sign-in | Supabase auth | — | — |
-| `/onboarding` (retained) | org name, plan, consent, first project/key | `/api/onboarding/*` | — | — |
+| `/onboarding` (retained, **fixed**) | single step: org name · plan (`free/pro/team/enterprise`) · consent; **auto-creates one default analytics key → one-time reveal (copy)**; idempotent (re-submit can't clobber/duplicate via `onboarding_step` guard). Planned: **ENH-03 observability-only vs full-gateway fork**. | `/api/onboarding/setup`, `auth/callback` | — | — |
 | `/signup` | email + OAuth sign-up | Supabase auth | P1 | S2 |
 | `/join` | accept an invite → join org/project | `pending_invites`, `/api/team/invite/claim` | P1 | S2 |
 
@@ -167,8 +224,9 @@ Sub-surfaces: revenue connector card (Settings → Integrations); rate-card edit
 Tab shells: `/settings/{access,integrations,compliance,privacy}` render child config screens. Each child is a **config flow** (steps in §5).
 | Screen | Feature scope | Backing | Pri |
 |---|---|---|---|
-| `/settings/api-keys` | list/create/rotate/revoke/expiry; multi-period caps; provider-key links + primary; extension requests; usage | `/api/keys/*`, `key_caps`, `key_provider_links`, `spend_by_key`, `key_timeseries` | P1 |
+| `/settings/api-keys` *(ENH-01)* | **single key-creation wizard** (no mode radio); key shows a **derived Analytics/Gateway badge** (Gateway iff `key_provider_links` present); **provider-link step admin-only** (flips to gateway mode); list/detail show badge + linked provider keys + caps; rotate/revoke/expiry; extension requests; usage | `/api/keys/*`, `key_caps`, `key_provider_links`, `spend_by_key`, `key_timeseries` | P1 |
 | `/settings/provider-keys` | add/encrypt; allowed_models; data_region; custom/azure/bedrock endpoints; use_for_reconciliation; link to keys | `/api/provider-keys/*` | P1 |
+| GitHub/SCM connections (under Integrations) *(ENH-02, unchanged)* | **org-admin-managed** connections (connect token, list); repo→project binding lives in project Settings. RLS `is_org_admin` — **no project-admin relaxation, no project-scoped tokens** | `github_connections`, `scm_connections`, `project_github_repos` | P2 |
 | `/settings/routing` | fallback chains + proactive routing policies | `model_routing_rules`, `routing_policies` (**verify API**) | P2 |
 | `/settings/model-governance` | allow/block/requires-approval per model + approval queue | `org_model_policies`, `model_approval_requests` (**verify API**) | P2 |
 | Guardrails (under privacy/integrations) | profiles (PII/Bedrock/Azure) + rules (warn/block/redact; input/output; sampling; priority); PII incidents | `guardrail_profiles`, `guardrail_rules`, `pii_incidents` (**verify API**) | P2 |
@@ -178,6 +236,8 @@ Tab shells: `/settings/{access,integrations,compliance,privacy}` render child co
 | `/settings/privacy` | org PII detect/mask config; guardrails entry | `organizations` PII config | P2 |
 | `/settings/{access,enforce,shadow-it}` | keys + policies + enforce summary; check-in approval | `enforce_checkins`, `sdk_bypass_events` | P3 |
 | Eval configs / Copilot settings | eval configs surfaced in Quality; Copilot settings (auto-RCA, self-cost cap, scope) | `/api/evaluations/configs`; Copilot config | P2 |
+
+> **ENH-03 gate:** the control-plane screens above (provider-keys, routing, model-governance, guardrails block/redact) render a **"requires gateway mode"** empty-state in observability-only orgs (no provider keys / `gateway_mode='sdk_optional'`). Analytics + quality screens always render (with first-run empty-states).
 
 ### 4.10 Team / Members / Access — Exec/Fin  (S2, P1)
 | Screen | Feature scope | Backing |
@@ -229,9 +289,10 @@ All currently empty files. Build with `project_id`/`project_ids` pipe params + p
 11. **Eval config** — judge model → rubric → scorers → sampling rate/tiers → scope → enable. Table: `eval_configs`.
 12. **Prompt versioning + labels** — create prompt → add immutable version (messages + config + commit msg) → move labels (prod/staging) → resolve. Tables: `prompts`, `prompt_versions`, `prompt_labels`.
 13. **Annotation review + export** — queue (claim/skip) → reviewer workspace (score + comment + span) → submit (writes `eval_scores` human) → export to dataset. Tables: `annotation_queue`, `eval_scores`.
-14. **Onboarding (retained)** — signup → org name → plan → consent → first project/key. Routes: `/api/onboarding/*`.
+14. **Onboarding (retained, fixed)** — signup → org name → plan (`free/pro/team/enterprise`) → consent → **server auto-creates one default analytics key → one-time reveal (copy)** → dashboard. Idempotent (`onboarding_step` guard prevents re-submit clobber/duplicate). Routes: `/api/onboarding/setup`, `auth/callback`. *(Planned ENH-03 fork: observability-only vs full-gateway.)*
 15. **Org settings** — data residency · gateway mode · PII detect/mask · cache mode/TTL. Table: `organizations`.
 16. **Revenue ingest (PRD‑8)** — billing sync (Stripe/Metronome/Orb) | `POST /api/revenue` + SDK | manual CSV | modeled (usage × rate card); identity mapping (billing ID ↔ `customer_id`); currency. **Backend gap — build needed.**
+17. **GitHub / SCM connect (ENH-02, unchanged)** — **org admin** connects GitHub/SCM (org-level token) → binds repos to a project (`project_github_repos`) in project Settings → branch attribution lights up (`spend_by_branch*`, `/api/metrics/branch-developers`). RLS `is_org_admin` — kept exactly as previously built.
 
 ---
 
@@ -278,3 +339,6 @@ All currently empty files. Build with `project_id`/`project_ids` pipe params + p
 - This roadmap is the single source of truth and **supersedes `docs/frontend/pending-ui.md`**.
 - Re-verify the §0 counts (`apps/web/app/**/page.tsx`, `tinybird/pipes/*.pipe`) when revisiting.
 - Update this file as areas are built — flip a screen's note to "built" with the commit/PR, and record backend-gap closures (e.g., when the `sessions_list` route or revenue ingestion lands).
+- **Build log — 2026-06-16 (S0 shell):** nav chrome shipped — Teal+Coral tokens (`globals.css`), grouped collapsible `Sidebar` (profile + New-project CTA + gear→Settings), Supabase-style `Topbar` (Feedback/Search/Setup-guide/Notifications/Theme/Account), `PageTabs` (3rd-level routes as tabs), and `SectionStub` shells across the full route tree. Design system in [`design-system.md`](./design-system.md). `tsc --noEmit` clean. **Page internals not built yet** — see the build list handed off after this commit.
+- **Build log — 2026-06-16 (Command Center + re-theme):** **Supersedes the Teal+Coral tokens above with Gold · Coral · Emerald** (neutral-gray surfaces + gold brand; dark = near-black, light mirrors it with AA-tuned values). Re-themed all 3 sync points — `globals.css` (light+dark semantic + `--viz-*` + new `--positive` and AA `*-text` tokens), `lib/charts/theme.ts` (gold-led `VIZ`/`VIZ_SERIES`, **fixes the prior indigo chart drift**), `components/patterns/KpiCard.tsx` (revived per-color top-rule map + token-based deltas). **Overview rebuilt as the org "Command Center"** (`components/dashboard/{CommandCenter,TriageRow,FirstRunBanner,CustomizeRail}.tsx`): fixed Triage zone (anomalies · budget · firing alerts · error rate) over a customizable canvas with period-over-period KPI deltas + spend sparkline + project launchpad (budget bars). **Self-serve customization** — widget registry expanded 7→14 (all data-backed via existing `/api/metrics/*`; manager-only widgets carry `roles`, enforced in `DashboardCanvas`), `CustomizeRail` (dnd-kit reorder + add-widget palette + 6 role templates), per-user layouts via `useDashboardLayout` (localStorage + best-effort `/api/preferences/layout`; column added in `supabase/migrations/20260616120000_dashboard_layouts.sql` — route soft-falls-back until applied). Frame mirrored to project-tier overview (scoped; triage omitted as it's org-level). `tsc --noEmit` + ESLint clean on all changed files. **Follow-ups:** apply the migration + regen `database.types.ts` for cross-device sync; streaming-output guardrail validation still deferred (unrelated).
+- **Follow-up — Quick Setup portal (needs enhancing):** the topbar `QuickSetupButton` (`components/dashboard/QuickSetupButton.tsx`) shipped as a first pass and should be deepened later. Known gaps: (1) **Python tab** — only the TS drop-in snippet exists because `packages/python-sdk` isn't in the checkout; verify the import symbol and add it. (2) **True observability-only test event** — step 2's cURL routes through the gateway and needs a linked provider key; add a no-provider-key "fire a test event" path (direct ingest) so observability users can verify without gateway setup. (3) **Live progress detection** — auto-check steps by detecting "provider key exists" / "first event received" instead of static steps; persist a "setup dismissed/completed" flag so the button can de-emphasize. (4) **Key options** — environment is hardcoded `development` and the project defaults to the newest project, not necessarily the onboarding default; let the user choose. (5) Align with **ENH-03** observability-only vs full-gateway fork and reuse onboarding copy.

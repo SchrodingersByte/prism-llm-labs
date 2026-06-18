@@ -71,6 +71,29 @@ export function toQueryParams(scope: Scope, projectId?: string): Record<string, 
   return params;
 }
 
+/**
+ * The window immediately preceding the current range, of equal length — used for
+ * period-over-period deltas (7d→prior 7d, 30d→prior 30d, …).
+ */
+export function resolvePreviousRange(range: RangeKey): { from: string; to: string } {
+  const cur     = resolveRange(range);
+  const curFrom = new Date(cur.from.replace(" ", "T"));
+  const curTo   = new Date(cur.to.replace(" ", "T"));
+  const lenMs   = curTo.getTime() - curFrom.getTime();
+  const prevFrom = new Date(curFrom.getTime() - lenMs);
+  return { from: format(prevFrom, CH_FORMAT), to: format(curFrom, CH_FORMAT) };
+}
+
+/** Like toQueryParams, but for the previous equal-length window (for deltas). */
+export function toPreviousQueryParams(scope: Scope, projectId?: string): Record<string, string> {
+  const { from, to } = resolvePreviousRange(scope.range);
+  const params: Record<string, string> = { from, to };
+  const pid = projectId ?? (scope.project !== "all" ? scope.project : "");
+  if (pid) params.project_id = pid;
+  if (scope.env && scope.env !== "all") params.environment = scope.env;
+  return params;
+}
+
 /** Stable react-query key fragment for a scope (so widgets refetch when scope changes). */
 export function scopeKey(scope: Scope): string {
   return `${scope.project}:${scope.range}:${scope.env}`;

@@ -4,8 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FolderKanban } from "lucide-react";
 import { PageHeader } from "@/components/patterns/PageHeader";
 import { EmptyState } from "@/components/patterns/EmptyState";
-import { DashboardCanvas } from "@/components/widgets/DashboardCanvas";
-import { DEFAULT_ORG_VIEW } from "@/components/widgets/registry";
+import { CommandCenter } from "@/components/dashboard/CommandCenter";
 import { useCanManage } from "@/components/layout/role-context";
 import { apiGet } from "@/lib/api/client";
 
@@ -22,7 +21,7 @@ export default function OverviewPage() {
 
   return (
     <div>
-      <PageHeader title="Overview" description="Organization-wide cost, usage, and performance." />
+      <PageHeader title="Command Center" description="Organization-wide cost, usage, and performance." />
       {devNoProjects ? (
         <div className="p-5">
           <EmptyState
@@ -32,7 +31,7 @@ export default function OverviewPage() {
           />
         </div>
       ) : (
-        <DashboardCanvas widgetIds={DEFAULT_ORG_VIEW} />
+        <CommandCenter />
       )}
     </div>
   );

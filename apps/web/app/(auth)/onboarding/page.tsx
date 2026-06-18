@@ -8,18 +8,32 @@ import { createClient } from "@/lib/supabase/client";
 
 const PLANS = [
   {
-    id: "developer" as const,
-    label: "Developer",
-    badge: "$19 / mo",
-    tagline: "For individual developers",
-    perks: ["1 seat", "Unlimited projects", "Core analytics + governance", "Community support"],
+    id: "free" as const,
+    label: "Free",
+    badge: "$0",
+    tagline: "Get started",
+    perks: ["1 seat", "Core analytics", "Community support"],
   },
   {
-    id: "startup" as const,
-    label: "Startup",
-    badge: "$29 / mo",
-    tagline: "For growing teams",
-    perks: ["Up to 10 seats", "Teams & attribution", "Full analytics + governance", "Priority support"],
+    id: "pro" as const,
+    label: "Pro",
+    badge: "$49 / mo",
+    tagline: "For small teams",
+    perks: ["Up to 5 seats", "Full analytics + governance", "Priority support"],
+  },
+  {
+    id: "team" as const,
+    label: "Team",
+    badge: "$199 / mo",
+    tagline: "For growing orgs",
+    perks: ["Up to 20 seats", "Teams & attribution", "SSO"],
+  },
+  {
+    id: "enterprise" as const,
+    label: "Enterprise",
+    badge: "Custom",
+    tagline: "For large orgs",
+    perks: ["Unlimited seats", "Dedicated support", "Custom contracts"],
   },
 ];
 
@@ -142,12 +156,14 @@ function OnboardingForm() {
   const [email,     setEmail]     = useState("");
   const [fullName,  setFullName]  = useState("");
   const [orgName,   setOrgName]   = useState("");
-  const [plan,      setPlan]      = useState<"developer" | "startup">("developer");
+  const [plan,      setPlan]      = useState<"free" | "pro" | "team" | "enterprise">("free");
   const [marketing, setMarketing] = useState(false);
   const [tos,       setTos]       = useState(false);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
   const [ready,     setReady]     = useState(false); // wait for session
+  const [createdKey, setCreatedKey] = useState<string | null>(null); // one-time key reveal
+  const [copied,    setCopied]    = useState(false);
 
   const supabase = createClient();
 
@@ -196,6 +212,20 @@ function OnboardingForm() {
       return;
     }
 
+    // A default analytics key is minted once on first setup — reveal it before
+    // continuing (the plaintext is never retrievable again).
+    const json = await res.json().catch(() => ({} as { api_key?: string }));
+    if (json?.api_key) {
+      setCreatedKey(json.api_key as string);
+      setLoading(false);
+      return;
+    }
+
+    router.push(redirectTo);
+    router.refresh();
+  }
+
+  function finish() {
     router.push(redirectTo);
     router.refresh();
   }
@@ -204,6 +234,50 @@ function OnboardingForm() {
     return (
       <div className="w-full max-w-[380px] mx-auto flex items-center justify-center h-40">
         <div className="h-6 w-6 border-2 border-[var(--ink-300)] border-t-[var(--ink-900)] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // One-time API key reveal (shown after first setup completes).
+  if (createdKey) {
+    return (
+      <div className="w-full max-w-[380px] mx-auto">
+        <div className="flex items-center gap-2 mb-7">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full text-white text-xs font-black shrink-0" style={{ background: "var(--ink-900)" }}>P</span>
+          <span className="text-sm font-semibold tracking-tight" style={{ color: "var(--ink-900)" }}>Prism</span>
+        </div>
+        <h1 className="text-[1.75rem] leading-tight mb-1" style={{ color: "var(--ink-900)" }}>
+          <span className="font-light italic">Your </span><span className="font-black">API key.</span>
+        </h1>
+        <p className="text-sm mb-6" style={{ color: "var(--ink-300)" }}>
+          Copy it now — for security it won&apos;t be shown again. Use it to send telemetry from the SDK.
+        </p>
+        <div
+          className="rounded-lg border p-3 mb-3 break-all font-mono text-xs"
+          style={{ borderColor: "var(--ink-100)", background: "#f9fafb", color: "var(--ink-700)" }}
+        >
+          {createdKey}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(createdKey).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+          className="w-full py-2.5 rounded-lg text-sm font-medium mb-2 border transition-colors"
+          style={{ borderColor: "var(--ink-100)", color: "var(--ink-700)", background: "white" }}
+        >
+          {copied ? "Copied ✓" : "Copy key"}
+        </button>
+        <button
+          type="button"
+          onClick={finish}
+          className="btn-primary flex items-center justify-center gap-1.5 w-full py-2.5 rounded-lg text-sm font-semibold"
+        >
+          Continue to dashboard <span aria-hidden>→</span>
+        </button>
       </div>
     );
   }

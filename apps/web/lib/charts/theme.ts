@@ -8,21 +8,28 @@ import type { CSSProperties } from "react";
  */
 
 export const VIZ = {
-  indigo:  "#6366f1",
-  cyan:    "#06b6d4",
+  /* Brand palette — gold-led, coral as the signal. Mid-tones chosen to read on
+     BOTH white and near-black (Recharts renders one value for both themes); the
+     CSS --viz-* tokens carry brighter per-mode values for surfaces we control. */
+  gold:    "#eab308",
+  sky:     "#0ea5e9",
   violet:  "#8b5cf6",
   emerald: "#10b981",
-  amber:   "#f59e0b",
-  rose:    "#f43f5e",
+  coral:   "#f2605c",
   blue:    "#3b82f6",
   slate:   "#64748b",
+  amber:   "#eab308",
+  /* Back-compat aliases (old slot names → new palette) */
+  indigo:  "#eab308",
+  cyan:    "#0ea5e9",
+  rose:    "#f2605c",
 } as const;
 
 export type VizColor = keyof typeof VIZ;
 
 /** Default categorical series order (used when a chart has N series). */
 export const VIZ_SERIES: string[] = [
-  VIZ.indigo, VIZ.cyan, VIZ.violet, VIZ.emerald, VIZ.amber, VIZ.rose, VIZ.blue, VIZ.slate,
+  VIZ.gold, VIZ.sky, VIZ.violet, VIZ.emerald, VIZ.coral, VIZ.blue, VIZ.slate,
 ];
 
 /** Pick a stable color for the i-th series, wrapping if needed. */
@@ -33,7 +40,7 @@ export function seriesColor(i: number): string {
 /** Semantic deltas (e.g. error rate down = good). */
 export const SEMANTIC = {
   positive: VIZ.emerald,
-  negative: VIZ.rose,
+  negative: VIZ.coral,
   neutral:  VIZ.slate,
 } as const;
 

@@ -1,8 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/patterns/PageHeader";
-import { DashboardCanvas } from "@/components/widgets/DashboardCanvas";
-import { DEFAULT_PROJECT_VIEW } from "@/components/widgets/registry";
+import { CommandCenter } from "@/components/dashboard/CommandCenter";
 import { useProject } from "@/components/layout/project-context";
 
 export default function ProjectOverviewPage() {
@@ -10,7 +9,7 @@ export default function ProjectOverviewPage() {
   return (
     <div>
       <PageHeader title="Overview" description={`Metrics for ${project.name}, filtered by the selected environment.`} />
-      <DashboardCanvas widgetIds={DEFAULT_PROJECT_VIEW} projectId={project.id} />
+      <CommandCenter projectId={project.id} />
     </div>
   );
 }
