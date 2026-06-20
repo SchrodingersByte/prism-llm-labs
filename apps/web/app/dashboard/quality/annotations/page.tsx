@@ -1,15 +1,5 @@
-import { PenLine } from "lucide-react";
-import { SectionStub } from "@/components/layout/SectionStub";
+import { AnnotationReviewer } from "@/components/quality/AnnotationReviewer";
 
-export default function Page() {
-  return (
-    <SectionStub
-      hideHeader
-      title="Annotations"
-      icon={PenLine}
-      note="Reviewer queue lands here"
-      description="Prioritized annotation queue and the reviewer workspace (score + comment + accept/reject)."
-      phase="Stage S4"
-    />
-  );
+export default function AnnotationsPage() {
+  return <AnnotationReviewer />;
 }
