@@ -14,6 +14,7 @@ const QuerySchema = z.object({
   model:      z.string().optional(),
   provider:   z.string().optional(),
   key_id:     z.string().uuid().optional(),
+  project_id: z.string().uuid().optional(),
   status:     z.enum(["ok", "error", "all"]).default("all"),
   from:       z.string().optional(),
   to:         z.string().optional(),
@@ -33,12 +34,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid params" }, { status: 400 });
   }
 
-  const { limit, offset, model, provider, key_id, status, from, to, search } = params.data;
+  const { limit, offset, model, provider, key_id, project_id, status, from, to, search } = params.data;
   const admin = createAdminClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (admin as any)
-    .from("request_logs" as any)
+    .from("request_logs")
     .select(`
       id, model, provider, input_tokens, output_tokens, cost_usd,
       latency_ms, status_code, session_id, git_branch, git_author,
@@ -51,9 +52,10 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (model)    query = query.eq("model", model);
-  if (provider) query = query.eq("provider", provider);
-  if (key_id)   query = query.eq("api_key_id", key_id);
+  if (model)      query = query.eq("model", model);
+  if (provider)   query = query.eq("provider", provider);
+  if (key_id)     query = query.eq("api_key_id", key_id);
+  if (project_id) query = query.eq("project_id", project_id);
   if (from)     query = query.gte("created_at", from);
   if (to)       query = query.lte("created_at", to);
   if (status === "ok")    query = query.lt("status_code", 400);

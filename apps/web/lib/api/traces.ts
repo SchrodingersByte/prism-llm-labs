@@ -21,6 +21,11 @@ export function fetchSessionTraces(sessionId: string, signal?: AbortSignal): Pro
   return apiGet<{ traces: SessionTrace[] }>("/api/traces", { session_id: sessionId, limit: "200" }, signal).then((r) => r.traces ?? []);
 }
 
+/** Recent org traces, newest-first (trace rollups aren't project-tagged). */
+export function fetchRecentTraces(signal?: AbortSignal): Promise<SessionTrace[]> {
+  return apiGet<{ traces: SessionTrace[] }>("/api/traces", { limit: "100" }, signal).then((r) => r.traces ?? []);
+}
+
 /** Full unified view for one trace (spans + rollup + linked eval/rec/PII). */
 export function fetchTraceView(traceId: string, signal?: AbortSignal): Promise<TraceView> {
   return apiGet<TraceView>(`/api/traces/${traceId}`, undefined, signal);
