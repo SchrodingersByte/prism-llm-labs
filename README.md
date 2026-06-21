@@ -1,59 +1,113 @@
+<div align="center">
+
 # Prism
 
-**See exactly where your AI money goes.**
+**AI FinOps & LLM observability — see, govern, and optimize every model dollar.**
 
-Prism is an open-source LLM cost and usage observability SDK. Swap one import, get a real-time dashboard showing which team, project, and feature is driving your OpenAI bill — with budget alerts before surprises hit your invoice.
+Swap one import (or one URL) and get real-time cost, usage, governance, quality, and unit
+economics across **16+ providers** — in one platform.
+
+[![npm](https://img.shields.io/npm/v/@prism-llm-labs/sdk?label=%40prism-llm-labs%2Fsdk)](https://www.npmjs.com/package/@prism-llm-labs/sdk)
+[![PyPI](https://img.shields.io/pypi/v/prism-llm-labs?label=prism-llm-labs)](https://pypi.org/project/prism-llm-labs/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
 
 ```python
 # Before
 from openai import OpenAI
-
 # After — nothing else changes
 from prism import OpenAI
 ```
 
 ---
 
-## Why Prism
+## What is Prism?
 
-Every team using LLM APIs has the same problem: one aggregate number at the end of the month, zero attribution, and no way to know which feature caused the spike until weeks after it happened.
+Most teams shipping LLM features get one aggregate invoice at the end of the month — no
+attribution, no guardrails, and no idea which feature caused a spike until weeks later.
 
-Prism solves this with a zero-config SDK wrapper that intercepts every API call, attributes it to the right team and project, calculates the cost, and streams the data to a dashboard that updates in real time.
+**Prism turns every model and tool call into observability, governance, and unit economics.**
+Capture usage with a drop-in SDK or an optional policy gateway, then track spend by team,
+project, feature, and customer; enforce budgets, model policies, and content guardrails on
+the request path; and prove prompt/model changes with evals — all backed by a sub-second
+analytics pipeline.
 
-**What you get in 5 minutes:**
-- Every LLM call attributed to a project, team, and environment
-- Real-time spend dashboard with daily and monthly breakdowns
-- Budget alerts via Slack or email before you hit your limit
-- Model efficiency recommendations (right-sizing, caching opportunities, duplicate detection)
-- No infrastructure to run — fully managed, free tier included
+It ships as three deployable artifacts plus a package ecosystem:
+
+- **Web app** (`apps/web`) — Next.js 14 dashboard + REST API
+- **TypeScript SDK** — [`@prism-llm-labs/sdk`](packages/typescript-sdk)
+- **Python SDK** — [`prism-llm-labs`](packages/python-sdk)
 
 ---
 
-## Quick Start
+## Two ways to send data
 
-### Python
+| | SDK mode (default) | Gateway mode |
+|---|---|---|
+| **How** | Wraps your provider client in-process | One OpenAI-compatible endpoint per provider |
+| **Traffic** | Your calls go straight to the provider; only telemetry ships to Prism | Calls proxy through Prism, then to the provider |
+| **Enable** | `from prism import OpenAI` | Set `PRISM_GATEWAY_URL` (auto-detected) |
+| **Unlocks** | Zero added latency on the wire | Inline policy, fallbacks, guardrails, streaming analytics, provider-key vault |
 
-```bash
-pip install prism-llm-labs
-```
+Same one-line integration — pick the path per service.
 
-```python
-import os
-from prism import OpenAI
+---
 
-os.environ["PRISM_API_KEY"]   = "prism_live_xxxx"  # from useprism.dev/dashboard
-os.environ["PRISM_PROJECT"]   = "customer-support-bot"
-os.environ["PRISM_TEAM"]      = "product-eng"
-os.environ["PRISM_ENVIRONMENT"] = "production"
+## Features
 
-client = OpenAI()  # identical to openai.OpenAI()
+### 1. Capture everything
+One integration, every call recorded — your way, with no call-site changes.
+- **Universal gateway** — one OpenAI-compatible endpoint for 16+ providers, with inline policy, fallback chains, and capture.
+- **Drop-in SDKs** — TypeScript & Python clients; swap a single import.
+- **MCP & tool tracking** — wrap tool calls and attribute vector-DB cost via `downstream_resource` (Pinecone, Qdrant).
+- **Enforce & proxy** — an import interceptor and a zero-code MCP proxy CLI surface any un-instrumented traffic.
 
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "Summarize this ticket: ..."}],
-)
-# ^ This call is now tracked. Cost, tokens, latency, attribution — all captured.
-```
+### 2. Cost & usage observability
+Live cost, usage, and performance across every model, provider, session, and project.
+- **Command Center** — customizable overview: cost, requests, tokens, error rate, spend trend, with role templates.
+- **Models** — per-model spend, cache-hit rate, tokens-per-dollar, latency & TTFT percentiles, side-by-side compare.
+- **Sessions & traces** — session list → trace waterfall → payload viewer, with the true cost of each session.
+- **Logs** — searchable request-log explorer; jump from any row to its full trace.
+- **Agents & MCP** — per-tool cost breakdown, agent loop detection, vector-DB cost attribution.
+
+### 3. FinOps & chargeback
+Attribute every dollar to the team that drove it — and stop overspend before the invoice.
+- **Vendor spend & chargeback** — by provider, project, team, key, git branch, developer, and GL cost center.
+- **Budgets & forecasts** — org/project budgets with burn-down; hard caps on Free, predictable overage on paid.
+- **Unit economics** — cost per feature and per action, tokens-per-dollar, cache-hit rate, cost-per-outcome / ROI.
+- **Infrastructure & training** — unified LLM + MCP + vector-DB + fine-tuning cost view, reconciled to actual cloud bills.
+- **Anomaly detection** — automatic cost-spike detection across providers and models.
+
+### 4. Governance & guardrails
+Policy on the request path — enforced inline at the gateway, not in a spreadsheet.
+- **Model governance** — allow / block / require-approval per model and scope, with an approval queue.
+- **Guardrails** — warn / block / redact on input and output, with built-in PII detection and masking.
+- **Spend caps & residency** — per-key multi-period caps and data-residency policies that pin traffic to a region.
+- **Shadow IT** — gateway-coverage score plus SDK-bypass detection.
+- **Compliance & audit** — audit log, cost reconciliation, per-project content-capture controls.
+
+### 5. Quality & evals
+Ship prompt and model changes with evidence — score, compare, review, and catch drift.
+- **Quality scoring** — LLM-judge scores by model and scorer (faithfulness, answer relevancy, toxicity, hallucination…).
+- **Prompt registry** — named prompts → immutable versions → movable production/staging labels, decoupled from deploys.
+- **Evals & experiments** — run a subject over a dataset, compare against a baseline, and gate CI on the verdict.
+- **Arena** — run one prompt against multiple models side by side with real, normalized cost.
+- **Annotations & feedback** — human review queue plus end-user thumbs that calibrate the judge.
+- **Drift & errors** — drift by segment and clustered error signatures that drill to the offending traces.
+
+### 6. Operate & grow
+Run the platform day to day — and connect model spend to revenue.
+- **Alerts** — 12 trigger types (budget, spend spike, anomaly, error rate, tool-loop, PII, drift…) to email / Slack / webhook.
+- **Customers P&L** — cost-to-serve, revenue, and gross margin per customer, with unprofitable-account flags.
+- **Copilot** — ask questions in plain English; answers cite the underlying data and link to the trace.
+- **Projects & teams** — project workspaces with cost attribution, four-role RBAC, invites, and per-project grants.
+
+> Explore them interactively on the marketing site: `/features` · `/docs` · `/pricing`.
+
+---
+
+## Quick start
 
 ### TypeScript / Node
 
@@ -65,284 +119,175 @@ npm install @prism-llm-labs/sdk
 import { OpenAI } from "@prism-llm-labs/sdk";
 
 const client = new OpenAI({
-  // All standard openai options work identically
-  apiKey: process.env.OPENAI_API_KEY,
-  // Prism-specific (or set as env vars)
-  prismKey: process.env.PRISM_API_KEY,
-  project: "document-parser",
-  team: "data-eng",
+  apiKey:   process.env.OPENAI_API_KEY,
+  prismKey: process.env.PRISM_API_KEY,   // dashboard → Settings → Access → API Keys
+  project:  "support-bot",
+  environment: "production",
 });
 
-const response = await client.chat.completions.create({
+// Use exactly like openai.OpenAI — cost, tokens, latency & attribution captured automatically
+const res = await client.chat.completions.create({
   model: "gpt-4o",
-  messages: [{ role: "user", content: "Extract the key clauses from..." }],
+  messages: [{ role: "user", content: "Summarize this ticket…" }],
 });
 ```
 
-### Async Python
-
-```python
-from prism import AsyncOpenAI
-
-client = AsyncOpenAI()
-
-async def summarize(text: str) -> str:
-    response = await client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": text}],
-    )
-    return response.choices[0].message.content
-```
-
----
-
-## Attribution
-
-Every call needs to know which project and team it came from. Set via environment variables or constructor arguments.
-
-**Environment variables** (recommended for production services):
+### Python
 
 ```bash
-PRISM_API_KEY=prism_live_xxxx
-PRISM_PROJECT=customer-support-bot    # maps to a project in your dashboard
-PRISM_TEAM=product-eng                # maps to a team member group
-PRISM_ENVIRONMENT=production          # production | staging | development
+pip install prism-llm-labs
 ```
 
-**Per-service override** (for monorepos with multiple services):
-
 ```python
-# Service A
-client_a = OpenAI(project="chat-feature", team="frontend-eng")
+from prism import OpenAI
 
-# Service B in the same process
-client_b = OpenAI(project="doc-parser", team="data-eng")
-```
-
-**Call-level tags** (for feature-level breakdown within a service):
-
-```python
-response = client.chat.completions.create(
+client = OpenAI(prism_key="prism_live_...", project="support-bot")
+res = client.chat.completions.create(
     model="gpt-4o",
-    messages=[...],
-    extra_headers={"X-Prism-Tags": "feature=summary,experiment=v2"},
+    messages=[{"role": "user", "content": "Summarize this ticket…"}],
 )
 ```
 
----
+### Gateway (any language, via cURL)
 
-## Dashboard
-
-Sign up at [useprism.dev](https://useprism.dev) to get your API key and access the dashboard.
-
-The dashboard shows:
-
-**Overview** — Total spend this month, today vs yesterday, projected end-of-month, spend trend over 30 days, top projects by cost, spend by model.
-
-**Projects** — Per-project drill-down with hourly spend charts, token breakdown (input vs output vs cached), average cost per request, context window utilization, and request volume.
-
-**Team** — Per-developer spend, budget utilization, and most expensive individual calls.
-
-**Models** — Cross-project model comparison, output/input token ratio, cost-per-request by model, and model right-sizing recommendations.
-
-**Alerts** — Configure budget thresholds, spend spike detection, and error rate monitors with delivery to Slack, email, or any webhook.
-
----
-
-## Budget Controls
-
-Set budgets per project or per developer. Prism will alert you (or hard-block calls) before limits are hit.
-
-```python
-# Alert-only mode: get notified at 80% of budget, calls continue
-# Configure in dashboard under Projects > [your project] > Budget
-
-# Hard-cap mode: calls return PrismBudgetExceededError when budget is hit
-# Enable in dashboard under Projects > [your project] > Budget > Enforcement
+```bash
+curl https://useprism.dev/api/gateway/openai/v1/chat/completions \
+  -H "Authorization: Bearer $PRISM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-4o","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-When a hard cap is hit, the SDK raises `prism.PrismBudgetExceededError`. Handle it in your application:
-
-```python
-from prism import OpenAI, PrismBudgetExceededError
-
-client = OpenAI()
-
-try:
-    response = client.chat.completions.create(...)
-except PrismBudgetExceededError:
-    # Fall back to a cheaper model or return a cached response
-    response = fallback_response()
-```
+Your first events appear on the dashboard in real time.
 
 ---
 
-## Streaming Support
+## Environment variables
 
-Streaming responses are fully supported. Prism automatically injects `stream_options={"include_usage": True}` to capture accurate token counts from the stream's final chunk.
-
-```python
-stream = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[{"role": "user", "content": "Tell me a story..."}],
-    stream=True,
-)
-
-for chunk in stream:
-    if chunk.choices[0].delta.content:
-        print(chunk.choices[0].delta.content, end="", flush=True)
-
-# Token count and cost are captured automatically when stream ends
-```
+| Variable | Effect |
+|---|---|
+| `PRISM_API_KEY` | **Required.** Authenticates the SDK / gateway. |
+| `PRISM_GATEWAY_URL` | Auto-enables gateway mode (e.g. `https://useprism.dev`). |
+| `PRISM_PROJECT` | Project attribution tag. |
+| `PRISM_ENVIRONMENT` | `production` \| `staging` \| `development`. |
+| `PRISM_TEAM` | Team identifier for per-member attribution. |
+| `PRISM_COST_CENTER` | GL code stamped as `tags['cost_center']` for chargeback. |
+| `PRISM_SERVICE_NAME` | Service name for Shadow-IT / bypass detection. |
 
 ---
 
-## Supported Providers
+## Package ecosystem
 
-| Provider | Python | TypeScript | Notes |
-|----------|--------|------------|-------|
-| OpenAI (direct) | ✅ | ✅ | All chat + embedding models |
-| Azure OpenAI | ✅ | ✅ | Auto-detected from `base_url` |
-| Anthropic | ✅ | 🔜 v1.1 | claude-3-5-sonnet, claude-3-5-haiku, claude-3-opus |
-| Google Gemini | 🔜 v1.2 | 🔜 v1.2 | gemini-1.5-pro, gemini-1.5-flash |
+| Package | Registry | What it does |
+|---|---|---|
+| [`@prism-llm-labs/sdk`](packages/typescript-sdk) | npm | TypeScript drop-in for OpenAI / Anthropic / Google + evals, feedback, prompts, tracing |
+| [`prism-llm-labs`](packages/python-sdk) | PyPI | Python drop-in for OpenAI / Anthropic / Google + the same advanced helpers + MCP |
+| [`@prism-llm-labs/mcp-sdk`](packages/mcp-sdk) | npm | MCP middleware — tracks tool/resource/prompt calls, enforces session budgets & loop limits |
+| [`@prism-llm-labs/mcp-proxy`](packages/mcp-proxy) | npm | Zero-code CLI that wraps any MCP server (e.g. in Claude Desktop) |
+| [`@prism-llm-labs/enforce`](packages/enforce) | npm | Import hook that auto-wraps raw provider SDKs so no spend goes untracked |
+| [`@prism-llm-labs/aws-helpers`](packages/aws-helpers) | npm | Real-time AWS cost extractors for MCP tool calls (Lambda, DynamoDB, S3, Bedrock) |
+| [`@prism-llm-labs/langchain`](packages/langchain-ts) | npm | LangChain callback handler for cost observability |
+| `@prism-llm-labs/github-action` | (private) | Posts an LLM cost-diff comment on pull requests |
 
 ---
 
 ## Architecture
 
 ```
-Your Application
-      │
-      │  from prism import OpenAI
-      ▼
-┌─────────────────┐
-│   Prism SDK     │  Intercepts call
-│                 │  ├─ Budget check  (Upstash Redis, <2ms, sync)
-│                 │  ├─ Forward call  → LLM Provider (unchanged)
-│                 │  └─ Capture event (Tinybird ingest, async, non-blocking)
-└────────┬────────┘
-         │                         │
-         ▼                         ▼
-   LLM Provider           Tinybird (ClickHouse)
-  (OpenAI, etc.)          Real-time event store
-                                   │
-                          ┌────────▼────────┐
-                          │  Prism Dashboard │
-                          │  (Next.js/Vercel) │
-                          └─────────────────┘
+            Your application
+                  │  SDK (in-process)   or   Gateway (proxied + governed)
+                  ▼
+        ┌───────────────────────┐
+        │        Prism          │  budget check · policy · guardrails · capture
+        └─────────┬─────────────┘
+                  │ events (fire-and-forget)
+   ┌──────────────┼───────────────────────────┐
+   ▼              ▼                             ▼
+LLM provider   Tinybird (ClickHouse)      Supabase (Postgres + RLS)
+              real-time analytics          metadata: orgs, keys, projects,
+              (47 pipes)                    policies, budgets, members
+                  │
+                  ▼
+         Prism dashboard (Next.js / Vercel)   ·   Upstash Redis (budgets, rate limits)
 ```
 
-The SDK never buffers or stores your prompt content. Only metadata is captured:
-model name, token counts, cost, latency, status code, and your attribution tags.
-Your prompt text never touches Prism's infrastructure.
+**Stack**
+- **Web app** — Next.js 14 App Router (dashboard + REST API), deployed on Vercel
+- **Analytics** — Tinybird (managed ClickHouse); all spend/usage queries hit Tinybird pipes
+- **Metadata** — Supabase (Postgres + Row-Level Security)
+- **Budgets / rate limits** — Upstash Redis (sub-2ms checks)
 
----
+**Providers** — OpenAI · Anthropic · Google · Azure OpenAI · AWS Bedrock · Mistral · Cohere ·
+Groq · xAI · Together · Fireworks · Perplexity · OpenRouter · Cerebras · Nebius — plus Ollama
+and any OpenAI-compatible endpoint.
 
-## Fail-Safe Design
-
-Prism is built to never be the reason your application breaks.
-
-- **Fail open**: If Prism's ingestion endpoint is unreachable, the SDK logs a warning and your LLM call succeeds normally. You lose observability data for that call — your application never fails.
-- **Non-blocking**: Event capture runs in a daemon background thread (Python) or unawaited Promise (TypeScript). The SDK adds zero blocking latency beyond the budget check.
-- **Budget circuit breaker**: Hard-cap enforcement can be disabled per-project at any time from the dashboard without a code change.
-
----
-
-## Self-Hosting
-
-Prism is open-source and can be self-hosted. You'll need:
-
-- A [Tinybird](https://tinybird.co) account (or self-hosted ClickHouse with the Tinybird schema)
-- A [Supabase](https://supabase.com) project
-- An [Upstash](https://upstash.com) Redis database
-- Node 20+ for the web app
-
-```bash
-git clone https://github.com/your-org/prism
-cd prism
-cp apps/web/.env.example apps/web/.env.local
-# Fill in your Tinybird, Supabase, and Upstash credentials
-
-pnpm install
-cd tinybird && tb push --force   # push event schema
-pnpm --filter web dev            # start dashboard at localhost:3000
-```
-
-See `CLAUDE.md` for the full Supabase migration SQL and Tinybird pipe definitions.
+**Fail-safe** — telemetry is fire-and-forget; if Prism is unreachable, your LLM call still
+succeeds. Budget hard-caps are the only synchronous check (a ~2 ms Redis call) and can be
+toggled per project without a deploy.
 
 ---
 
 ## Pricing
 
-All plans start with a **14-day free trial** — no credit card required. Trial begins when your first tracked event arrives, not at signup. Payments via Razorpay (cards, UPI, netbanking). Prices in INR; international cards accepted.
+Metered on **telemetry events per month — not per seat.** Add your whole team within the
+plan's member cap at no per-head cost.
 
-| Plan | Price | Events/day | Projects | History | Alerts |
-|------|-------|-----------|----------|---------|--------|
-| **Starter** | ₹2,499/mo | 2M | 5 | 30 days | Email |
-| **Growth** | ₹8,499/mo | 20M | Unlimited | 90 days | Email + Slack + Webhook |
-| **Scale** | ₹24,999/mo | Unlimited | Unlimited | 1 year | All + SSO + priority support |
+| Plan | Price | Events / mo | Members | Retention | Overage |
+|---|---|---|---|---|---|
+| **Free** | $0 | 100k | 2 | 7 days | hard cap at quota |
+| **Pro** | $49/mo | 2M | 10 | 90 days | $0.50 / 1k events |
+| **Team** | $199/mo | 10M | 50 | 1 year | $0.30 / 1k events |
+| **Enterprise** | Custom | Unlimited | Unlimited | 2 years+ | Custom |
 
-Annual plans available at 20% discount. No per-seat pricing. SDKs are always free and open source.
-
-Sign up at [useprism.dev](https://useprism.dev).
+Paid plans include a 14-day trial. SDKs are free and open source.
 
 ---
 
-## Contributing
+## Repository layout
 
-Contributions are welcome. The SDK is MIT licensed.
-
-```bash
-# Python SDK
-cd packages/python-sdk
-pip install -e ".[dev]"
-pytest
-
-# TypeScript SDK
-cd packages/typescript-sdk
-pnpm install && pnpm test
-
-# Web app
-cd apps/web
-pnpm dev
+```
+apps/web            Next.js dashboard + REST API
+packages/           SDKs & tools (see the ecosystem table)
+tinybird/           Tinybird datasources + pipes (the analytics layer)
+supabase/           Postgres migrations (metadata + RLS)
+docs/               Architecture, frontend roadmap, PRDs
 ```
 
-Please open an issue before starting significant new features. The roadmap is tracked in [GitHub Issues](https://github.com/your-org/prism/issues).
+### Local development
 
-### Updating the Pricing Table
+```bash
+pnpm install
+pnpm --filter web dev          # dashboard → localhost:3000
 
-Model prices change frequently. To update:
+# Tinybird (analytics)
+cd tinybird && tb --cloud deploy
 
-1. Edit `apps/web/lib/pricing/table.ts`
-2. Mirror the change in `packages/python-sdk/prism/_pricing.py`
-3. Open a PR with the source (e.g., link to OpenAI pricing page)
+# SDKs
+cd packages/typescript-sdk && pnpm build && pnpm test
+cd packages/python-sdk     && pip install -e ".[dev]" && pytest
+```
+
+See [CLAUDE.md](CLAUDE.md) for the full architecture, pipe list, and conventions.
 
 ---
 
-## Roadmap
+## Publishing the SDKs
 
-- [x] Python SDK (OpenAI + Azure OpenAI)
-- [x] TypeScript/Node SDK
-- [x] Real-time cost dashboard
-- [x] Budget controls (alert-only + hard cap)
-- [x] Slack + email + webhook alerts
-- [x] Efficiency recommendations
-- [ ] Anthropic TypeScript SDK support (v1.1)
-- [ ] Google Gemini SDK support (v1.2)
-- [ ] LangChain / LlamaIndex integration (v1.3)
-- [ ] Cost anomaly ML model (v2)
-- [ ] Performance monitoring — latency + quality scoring (v2)
-- [ ] dbt package for self-hosted analytics (v2)
-- [ ] Stripe billing integration (v2)
+Releases are tag-triggered GitHub Actions:
+
+```bash
+git tag typescript-sdk/v0.5.1 && git push origin typescript-sdk/v0.5.1   # → npm
+git tag python-sdk/v0.4.1     && git push origin python-sdk/v0.4.1       # → PyPI
+```
+
+npm tags: `typescript-sdk/v*`, `mcp-sdk/v*`, `enforce/v*`, `aws-helpers/v*`, `langchain-ts/v*`,
+`mcp-proxy/v*` (uses the `NPM_TOKEN` secret). PyPI: `python-sdk/v*` (uses `PYPI_API_TOKEN`).
+
+> **Pricing tables are mirrored** between `apps/web/lib/pricing/table.ts` and
+> `packages/python-sdk/prism/_pricing.py` — update both when adding a model.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
-
-The Prism dashboard (hosted at useprism.dev) is a commercial product. The SDK packages (`prism-llm`, `@prism-llm-labs/sdk`) and this repository are open source under MIT.
-
----
-
-*Built with [Tinybird](https://tinybird.co), [Supabase](https://supabase.com), [Vercel](https://vercel.com), and [Upstash](https://upstash.com).*
+MIT — see [LICENSE](LICENSE). The hosted dashboard at [useprism.dev](https://useprism.dev) is a
+commercial product; the SDK packages and this repository are open source.
