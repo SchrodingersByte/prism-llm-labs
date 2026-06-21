@@ -196,3 +196,118 @@
   .dash-scroll::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
   .dash-scroll::-webkit-scrollbar-track { background: transparent; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MARKETING — public site + auth showcase. Dark navy → violet, gold accent.
+   Self-contained .mk-* tokens scoped to .marketing so the dashboard/auth-form
+   palettes are never affected. Apply `.marketing` to set tokens + ink colour,
+   `.marketing-bg` to paint the layered violet glow.
+   ══════════════════════════════════════════════════════════════════════════ */
+.marketing {
+  --mk-bg:            #09090f;
+  --mk-bg-2:          #0c0a16;
+  --mk-surface:       rgba(255, 255, 255, 0.045);
+  --mk-surface-2:     rgba(255, 255, 255, 0.07);
+  --mk-border:        rgba(255, 255, 255, 0.10);
+  --mk-border-strong: rgba(255, 255, 255, 0.17);
+  --mk-fg:            #f4f4f5;   /* zinc-100 */
+  --mk-muted:         #a1a1aa;   /* zinc-400 */
+  --mk-faint:         #71717a;   /* zinc-500 */
+  --mk-violet:        #a78bfa;
+  --mk-violet-deep:   #8b5cf6;
+  --mk-sky:           #38bdf8;
+  --mk-emerald:       #34d399;
+  --mk-coral:         #fb7185;
+  --mk-gold:          #facc15;
+  color: var(--mk-fg);
+  font-feature-settings: "cv11", "ss01";
+}
+.marketing ::selection { background: rgba(139, 92, 246, 0.35); color: #fff; }
+
+.marketing-bg {
+  background-color: var(--mk-bg);
+  background-image:
+    radial-gradient(1100px 560px at 50% -8%, rgba(139, 92, 246, 0.20), transparent 60%),
+    radial-gradient(820px 460px at 88% 4%, rgba(56, 189, 248, 0.10), transparent 55%),
+    radial-gradient(760px 520px at 6% 18%, rgba(250, 204, 21, 0.05), transparent 60%),
+    linear-gradient(180deg, var(--mk-bg) 0%, var(--mk-bg-2) 100%);
+}
+
+@layer components {
+  .mk-eyebrow {
+    color: var(--mk-violet);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .mk-grad-text {
+    background: linear-gradient(100deg, #c4b5fd 0%, #a78bfa 45%, #facc15 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .mk-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+    border: 1px solid var(--mk-border);
+    border-radius: 16px;
+  }
+  .mk-card-hover { transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease; }
+  .mk-card-hover:hover {
+    border-color: var(--mk-border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 24px 48px -28px rgba(139, 92, 246, 0.45);
+  }
+  .mk-glass {
+    background: rgba(12, 10, 22, 0.66);
+    border: 1px solid var(--mk-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .mk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--mk-border);
+    background: var(--mk-surface);
+    color: var(--mk-muted);
+    border-radius: 999px;
+    font-size: 0.75rem;
+  }
+  .mk-nav-link { color: var(--mk-muted); transition: color 0.15s ease; }
+  .mk-nav-link:hover { color: var(--mk-fg); }
+  .mk-link { color: var(--mk-fg); text-decoration-color: rgba(167, 139, 250, 0.5); transition: color 0.15s ease; }
+  .mk-link:hover { color: var(--mk-violet); }
+
+  .mk-btn-primary {
+    background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 100%);
+    color: #0a0a12;
+    border: 1px solid rgba(167, 139, 250, 0.55);
+    box-shadow: 0 10px 28px -10px rgba(139, 92, 246, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+  .mk-btn-primary:hover { filter: brightness(1.06); box-shadow: 0 14px 34px -10px rgba(139, 92, 246, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.32); }
+  .mk-btn-primary:active { transform: translateY(1px); }
+  .mk-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .mk-btn-ghost {
+    background: var(--mk-surface);
+    color: var(--mk-fg);
+    border: 1px solid var(--mk-border-strong);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .mk-btn-ghost:hover { background: var(--mk-surface-2); border-color: rgba(255, 255, 255, 0.28); }
+  .mk-btn-ghost:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .mk-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--mk-border);
+    color: var(--mk-fg);
+    border-radius: 10px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .mk-input::placeholder { color: var(--mk-faint); }
+  .mk-input:focus { outline: none; border-color: var(--mk-violet); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18); }
+
+  .mk-hairline { border-color: var(--mk-border); }
+}

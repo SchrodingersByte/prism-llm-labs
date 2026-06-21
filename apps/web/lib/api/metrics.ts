@@ -24,6 +24,9 @@ import type {
   WorkloadSpend,
   TeamSpend,
   BranchSpend,
+  TrainingCostSummary,
+  CustomerDailyPoint,
+  CustomerModelBreakdown,
   McpServerSpend,
   McpToolSpend,
   AgentLoopRow,
@@ -252,6 +255,86 @@ export interface ReconciliationResult {
 export function fetchReconciliation(scope: Scope, projectId?: string, signal?: AbortSignal): Promise<ReconciliationResult> {
   return apiGet<ReconciliationResult>("/api/metrics/reconciliation", toQueryParams(scope, projectId), signal)
     .catch(emptyOn403<ReconciliationResult>({ data: [], has_provider_data: false, has_per_model_keys: false }));
+}
+
+export function fetchTrainingCostSummary(scope: Scope, projectId?: string, signal?: AbortSignal): Promise<TrainingCostSummary[]> {
+  return apiGet<Wrapped<TrainingCostSummary[]>>("/api/metrics/training", toQueryParams(scope, projectId), signal)
+    .then((r) => r.data ?? []).catch(emptyOn403<TrainingCostSummary[]>([]));
+}
+
+// ── Customers / P&L (manager-only; revenue ingestion is a backend gap) ──────
+
+export interface CustomerRow {
+  id:                  string;
+  customer_id:         string;
+  display_name:        string | null;
+  monthly_spend_usd:   number | null;
+  monthly_token_limit: number | null;
+  is_active:           boolean;
+  current_cost_usd:    number;
+  current_tokens:      number;
+  requests:            number;
+  utilization_pct:     number | null;
+  status:              string;
+}
+
+export function fetchCustomers(signal?: AbortSignal): Promise<CustomerRow[]> {
+  return apiGet<Wrapped<CustomerRow[]>>("/api/metrics/customers", undefined, signal)
+    .then((r) => r.data ?? []).catch(emptyOn403<CustomerRow[]>([]));
+}
+
+export function fetchCustomerDaily(customerId: string, scope: Scope, signal?: AbortSignal): Promise<CustomerDailyPoint[]> {
+  return apiGet<Wrapped<CustomerDailyPoint[]>>(`/api/metrics/customers/${customerId}/daily`, toQueryParams(scope), signal)
+    .then((r) => r.data ?? []).catch(emptyOn403<CustomerDailyPoint[]>([]));
+}
+
+export function fetchCustomerModels(customerId: string, scope: Scope, signal?: AbortSignal): Promise<CustomerModelBreakdown[]> {
+  return apiGet<Wrapped<CustomerModelBreakdown[]>>(`/api/metrics/customers/${customerId}/models`, toQueryParams(scope), signal)
+    .then((r) => r.data ?? []).catch(emptyOn403<CustomerModelBreakdown[]>([]));
+}
+
+// ── Quality (PRD-1; online-eval scores) ─────────────────────────────────────
+
+export interface QualityTimeseriesPoint { date: string; scores: number; avg_score: number; pass_rate: number }
+export interface QualityByModelRow { model: string; avg_score: number; pass_rate: number; scores: number }
+export interface QualityByScorerRow { scorer_type: string; avg_score: number; pass_rate: number; scores: number }
+export interface QualityResult {
+  timeseries:   QualityTimeseriesPoint[];
+  by_model:     QualityByModelRow[];
+  by_scorer:    QualityByScorerRow[];
+  latest:       { date: string; avg_score: number; pass_rate: number } | null;
+  total_scores: number;
+}
+
+const RANGE_DAYS: Record<string, number> = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
+
+export function fetchQuality(scope: Scope, projectId?: string, signal?: AbortSignal): Promise<QualityResult> {
+  const params: Record<string, string> = { days: String(RANGE_DAYS[scope.range] ?? 30) };
+  const pid = projectId ?? (scope.project !== "all" ? scope.project : "");
+  if (pid) params.project_id = pid;
+  return apiGet<QualityResult>("/api/metrics/quality", params, signal)
+    .catch(emptyOn403<QualityResult>({ timeseries: [], by_model: [], by_scorer: [], latest: null, total_scores: 0 }));
+}
+
+export interface DriftPoint { window_start: string; window_end: string; segment: string; segment_value: string | null; metric: string; value: number; sample_size: number; computed_at: string }
+export interface DriftCluster { id: string; label: string; size: number; keywords: string[]; window_start: string; window_end: string; created_at: string }
+export interface DriftResult { metrics: DriftPoint[]; latest: Record<string, number>; clusters: DriftCluster[] }
+
+export function fetchDrift(scope: Scope, projectId?: string, signal?: AbortSignal): Promise<DriftResult> {
+  const params: Record<string, string> = { days: String(RANGE_DAYS[scope.range] ?? 30), segment: "all" };
+  void projectId;
+  return apiGet<DriftResult>("/api/metrics/drift", params, signal)
+    .catch(emptyOn403<DriftResult>({ metrics: [], latest: {}, clusters: [] }));
+}
+
+export interface ErrorCluster { signature: string; source: string; occurrences: number; last_seen: string }
+
+export function fetchErrorClusters(scope: Scope, projectId?: string, signal?: AbortSignal): Promise<ErrorCluster[]> {
+  const params: Record<string, string> = { days: String(RANGE_DAYS[scope.range] ?? 7) };
+  const pid = projectId ?? (scope.project !== "all" ? scope.project : "");
+  if (pid) params.project_id = pid;
+  return apiGet<{ clusters: ErrorCluster[] }>("/api/metrics/errors", params, signal)
+    .then((r) => r.clusters ?? []).catch(emptyOn403<ErrorCluster[]>([]));
 }
 
 // ── Agents / MCP (mcp_analytics-gated → empty for unentitled / developers) ───

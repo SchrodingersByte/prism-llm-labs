@@ -1,1 +1,5 @@
-export default function Page() { return null; }
+import { ArenaPlayground } from "@/components/workbench/ArenaPlayground";
+
+export default function ArenaPage() {
+  return <ArenaPlayground />;
+}

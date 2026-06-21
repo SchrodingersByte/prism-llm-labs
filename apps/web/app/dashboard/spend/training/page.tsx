@@ -1,15 +1,22 @@
-import { GraduationCap } from "lucide-react";
-import { SectionStub } from "@/components/layout/SectionStub";
+"use client";
 
-export default function Page() {
-  return (
-    <SectionStub
-      hideHeader
-      title="Training spend"
-      icon={GraduationCap}
-      note="Training & fine-tune costs land here"
-      description="Per-run training and fine-tune costs by provider and type. The full view lives under Operations → Training."
-      phase="Stage S3"
-    />
-  );
+import { GraduationCap } from "lucide-react";
+import { EmptyState } from "@/components/patterns/EmptyState";
+import { useCanManage } from "@/components/layout/role-context";
+import { Training } from "@/components/spend/Training";
+
+export default function TrainingSpendPage() {
+  const canManage = useCanManage();
+  if (!canManage) {
+    return (
+      <div className="p-5">
+        <EmptyState
+          icon={GraduationCap}
+          title="Training spend is manager-only"
+          description="Per-run training and fine-tune costs are available to organization owners and admins."
+        />
+      </div>
+    );
+  }
+  return <Training />;
 }

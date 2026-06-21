@@ -1,1 +1,5 @@
-export default function Page() { return null; }
+import { EvalsWorkbench } from "@/components/workbench/EvalsWorkbench";
+
+export default function EvalsPage() {
+  return <EvalsWorkbench />;
+}
